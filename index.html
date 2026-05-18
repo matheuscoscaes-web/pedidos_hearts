@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hearts Couro — Seu Pedido</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f5f0eb;min-height:100vh;padding-bottom:100px}
+    header{background:#6b3a2a;color:#fff;text-align:center;padding:22px 16px 18px}
+    header h1{font-size:1.6rem;letter-spacing:1px}
+    header p{font-size:.85rem;opacity:.8;margin-top:4px}
+    .container{max-width:520px;margin:0 auto;padding:20px 16px}
+    .sec-title{font-size:.75rem;font-weight:700;color:#9e7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+    .card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:16px}
+    .card h3{font-size:.95rem;color:#6b3a2a;font-weight:700;margin-bottom:14px}
+    /* itens do pedido */
+    .oi{display:flex;align-items:center;gap:12px;padding:12px;background:#fdf6f0;border-radius:12px;margin-bottom:8px}
+    .oi-emoji{width:46px;height:46px;background:#ede0d4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
+    .oi-info{flex:1}
+    .oi-info strong{font-size:.92rem;color:#333;display:block}
+    .oi-info .oi-sub{font-size:.78rem;color:#9e7060;margin-top:1px}
+    .oi-info .oi-preco{font-size:.9rem;font-weight:700;color:#6b3a2a;margin-top:4px}
+    .oi-qtd{font-size:.82rem;color:#9e7060;background:#ede0d4;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block}
+    .btn-rm{background:none;border:1.5px solid #f5c6c6;color:#c0392b;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:8px;transition:all .2s;white-space:nowrap}
+    .btn-rm:hover{background:#fde8e4;border-color:#c0392b}
+    /* frete */
+    .frete-box{background:#f0faf4;border:1.5px solid #a8d5b5;border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+    .frete-box .fb-nome{font-weight:700;font-size:.9rem;color:#1b5e20}
+    .frete-box .fb-prazo{font-size:.76rem;color:#2e7d32;margin-top:2px}
+    .frete-box .fb-preco{font-weight:700;color:#1b5e20;font-size:.95rem}
+    /* resumo */
+    .sum-linha{display:flex;justify-content:space-between;font-size:.88rem;color:#555;margin-bottom:8px}
+    .sum-total{display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;color:#6b3a2a;border-top:1.5px solid #eee;padding-top:10px;margin-top:4px}
+    /* botões */
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:15px;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;font-family:inherit;margin-top:10px}
+    .btn:active{transform:scale(.98)}.btn:hover{opacity:.9}.btn:disabled{opacity:.5;cursor:default}
+    .btn-mp{background:#009ee3;color:#fff}
+    .btn-wpp{background:#25d366;color:#fff}
+    /* aviso */
+    .warn{background:#fff8e1;border:1.5px solid #ffe082;border-radius:10px;padding:10px 14px;font-size:.8rem;color:#7b6000;margin-bottom:12px;line-height:1.5}
+    /* estado vazio / erro */
+    .page-msg{text-align:center;padding:60px 20px}
+    .page-msg .pm-icon{font-size:3rem;margin-bottom:12px}
+    .page-msg p{color:#9e7060;font-size:.9rem;line-height:1.6}
+    /* spinner */
+    .spin{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    /* toast */
+    .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#27ae60;color:#fff;padding:10px 22px;border-radius:40px;font-weight:700;font-size:.85rem;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:transform .3s;z-index:999;white-space:nowrap}
+    .toast.show{transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Hearts Couro</h1>
+  <p id="hdr-sub">Seu pedido</p>
+</header>
+
+<div class="container" id="page-content">
+  <div class="page-msg"><div class="pm-icon">⏳</div><p>Carregando pedido...</p></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── utils ──────────────────────────────────────────────────
+function toast(msg, cor) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = cor || '#27ae60';
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
+}
+function brl(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
+function decodeData(str) { return JSON.parse(decodeURIComponent(escape(atob(str)))); }
+
+// ── estado ─────────────────────────────────────────────────
+let ORDER    = null;
+let items    = [];
+let frete    = null;
+let wppAdmin = '';
+let modified = false;
+
+// ── parse URL ──────────────────────────────────────────────
+function parseUrl() {
+  const m = location.hash.match(/[#&]pedido=([^&]+)/);
+  if (!m) return null;
+  try { return decodeData(m[1]); } catch(e) { return null; }
+}
+
+// ── página ─────────────────────────────────────────────────
+function renderPage() {
+  ORDER = parseUrl();
+  const el = document.getElementById('page-content');
+
+  if (!ORDER || !ORDER.items) {
+    el.innerHTML = `<div class="page-msg"><div class="pm-icon">😕</div><p>Link de pedido inválido ou expirado.<br/>Entre em contato pelo WhatsApp.</p></div>`;
+    return;
+  }
+
+  items    = ORDER.items.map(i => ({...i}));
+  frete    = ORDER.frete || null;
+  wppAdmin = ORDER.wpp_admin || '';
+
+  if (ORDER.cliente) {
+    document.getElementById('hdr-sub').textContent = 'Pedido de ' + ORDER.cliente;
+  }
+
+  buildPage(el);
+}
+
+function buildPage(el) {
+  el.innerHTML = `
+    <div class="sec-title">Itens do seu pedido</div>
+    <div id="oi-list"></div>
+
+    ${frete ? `
+    <div class="card">
+      <h3>Frete</h3>
+      <div class="frete-box">
+        <div>
+          <div class="fb-nome">${frete.servico}${frete.empresa ? ' · ' + frete.empresa : ''}</div>
+          ${frete.prazo ? `<div class="fb-prazo">${frete.prazo}</div>` : ''}
+        </div>
+        <div class="fb-preco">${brl(frete.preco)}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="sum-linha"><span id="r-qtd-label">Itens</span><span id="r-sub"></span></div>
+      ${frete ? `<div class="sum-linha"><span>Frete (${frete.servico})</span><span>${brl(frete.preco)}</span></div>` : ''}
+      <div class="sum-total"><span>Total</span><span id="r-total"></span></div>
+    </div>
+
+    <div id="warn-mod" style="display:none" class="warn">
+      ✏️ Você removeu um item. Clique em pagar para confirmar o valor atualizado.
+    </div>
+
+    <div id="pag-area"></div>
+  `;
+
+  renderItems();
+  updateResumo();
+}
+
+// ── itens ──────────────────────────────────────────────────
+function renderItems() {
+  const el = document.getElementById('oi-list');
+  if (!el) return;
+
+  if (!items.length) {
+    el.innerHTML = `<div class="warn">Todos os itens foram removidos. Entre em contato pelo WhatsApp se precisar de ajuda.</div>`;
+    return;
+  }
+
+  el.innerHTML = items.map((item, i) => `
+    <div class="oi">
+      <div class="oi-emoji">👜</div>
+      <div class="oi-info">
+        <strong>${item.nome}</strong>
+        ${item.cor ? `<div class="oi-sub">${item.cor}</div>` : ''}
+        <div class="oi-preco">${brl(item.preco * item.qtd)}</div>
+        ${item.qtd > 1 ? `<span class="oi-qtd">${item.qtd} unidades</span>` : ''}
+      </div>
+      <button class="btn-rm" onclick="removerItem(${i})">Remover</button>
+    </div>`).join('');
+}
+
+function removerItem(i) {
+  items.splice(i, 1);
+  modified = true;
+  const w = document.getElementById('warn-mod');
+  if (w) w.style.display = 'block';
+  renderItems();
+  updateResumo();
+}
+
+// ── resumo ─────────────────────────────────────────────────
+function updateResumo() {
+  const sub   = items.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const total = sub + (frete ? frete.preco : 0);
+  const qtd   = items.reduce((s, i) => s + i.qtd, 0);
+
+  const lbl = document.getElementById('r-qtd-label');
+  if (lbl) lbl.textContent = `${qtd} ${qtd === 1 ? 'item' : 'itens'}`;
+  const subEl = document.getElementById('r-sub');
+  if (subEl) subEl.textContent = brl(sub);
+  const totEl = document.getElementById('r-total');
+  if (totEl) totEl.textContent = brl(total);
+
+  renderPagArea(total);
+}
+
+// ── pagamento ──────────────────────────────────────────────
+function renderPagArea(total) {
+  const el = document.getElementById('pag-area');
+  if (!el) return;
+
+  if (!items.length) {
+    el.innerHTML = `
+      <button class="btn btn-wpp" onclick="confirmarWpp()">
+        &#128740; Falar pelo WhatsApp
+      </button>`;
+    return;
+  }
+
+  el.innerHTML = `
+    <button class="btn btn-mp" id="btn-pagar" onclick="pagar()">
+      <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+      Pagar com Mercado Pago
+    </button>`;
+}
+
+async function pagar() {
+  if (!items.length) return;
+
+  const btn = document.getElementById('btn-pagar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Aguarde...';
+
+  try {
+    // Se não foi modificado, usa o link já gerado pelo admin
+    if (!modified && ORDER.mp_link) {
+      window.open(ORDER.mp_link, '_blank');
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
+      return;
+    }
+
+    // Se removeu itens, gera novo link com valor atualizado
+    const mpItems = items.map(i => ({
+      id: String(i.id),
+      title: i.nome + (i.cor ? ' - ' + i.cor : ''),
+      quantity: i.qtd,
+      unit_price: i.preco,
+      currency_id: 'BRL'
+    }));
+
+    if (frete && frete.preco > 0) {
+      mpItems.push({ id: 'frete', title: 'Frete - ' + frete.servico, quantity: 1, unit_price: frete.preco, currency_id: 'BRL' });
+    }
+
+    const res = await fetch('/api/mp/preferencia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: mpItems, nome_cliente: ORDER.cliente || 'Cliente' })
+    });
+
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+
+    window.open(data.mp_link, '_blank');
+  } catch(e) {
+    toast('Erro ao gerar pagamento. Confirme pelo WhatsApp.', '#e74c3c');
+    // fallback: WhatsApp
+    const el = document.getElementById('pag-area');
+    if (el) el.innerHTML += `
+      <button class="btn btn-wpp" onclick="confirmarWpp()" style="margin-top:8px">
+        &#128740; Confirmar pelo WhatsApp
+      </button>`;
+  } finally {
+    if (document.getElementById('btn-pagar')) {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
+    }
+  }
+}
+
+function confirmarWpp() {
+  if (!wppAdmin) { toast('WhatsApp da loja não encontrado', '#e74c3c'); return; }
+  const sub   = items.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const total = sub + (frete ? frete.preco : 0);
+  const cliente = ORDER?.cliente || '';
+
+  let msg = `Olá! ${cliente ? 'Sou ' + cliente + '. ' : ''}Preciso de ajuda com meu pedido da *Hearts Couro* 🤎`;
+  if (items.length) {
+    msg += `\n\n📦 *Itens restantes:*\n`;
+    items.forEach(i => { msg += `• ${i.qtd}x ${i.nome}${i.cor ? ' (' + i.cor + ')' : ''} — ${brl(i.preco * i.qtd)}\n`; });
+    if (frete) msg += `\n🚚 *Frete:* ${frete.servico} — ${brl(frete.preco)}\n`;
+    msg += `\n💰 *Total: ${brl(total)}*`;
+  } else {
+    msg += `\n\nRemovi todos os itens do pedido.`;
+  }
+
+  window.open(`https://wa.me/55${wppAdmin}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── boot ───────────────────────────────────────────────────
+renderPage();
+</script>
+</body>
+</html>
