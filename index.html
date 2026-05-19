@@ -65,6 +65,14 @@
     /* toast */
     .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#27ae60;color:#fff;padding:10px 22px;border-radius:40px;font-weight:700;font-size:.85rem;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:transform .3s;z-index:999;white-space:nowrap}
     .toast.show{transform:translateX(-50%) translateY(0)}
+    /* entrega local rj */
+    .rota-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9e7060;padding:10px 2px 4px;border-bottom:1px solid #f0e8e0;margin-bottom:6px;margin-top:4px}
+    .bairro-op{width:100%;padding:10px 12px;border:1.5px solid #e0d4c8;border-radius:8px;background:#fff;font-size:.87rem;font-weight:500;color:#333;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:inherit;transition:all .2s}
+    .bairro-op:hover{border-color:#6b3a2a;background:#fdf6f0}
+    .bairro-op .bo-preco{font-weight:700;color:#6b3a2a;font-size:.85rem;white-space:nowrap;margin-left:8px}
+    #rj-area input{width:100%;border:1.5px solid #e0d4c8;border-radius:10px;padding:10px 12px;font-size:.9rem;color:#333;outline:none;transition:border-color .2s;font-family:inherit}
+    #rj-area input:focus{border-color:#6b3a2a}
+    #rj-resultados{max-height:280px;overflow-y:auto;margin-top:8px}
   </style>
 </head>
 <body>
@@ -220,7 +228,7 @@ function renderFrete() {
       </button>
       <button class="btn-frete-op" id="btn-op-correios" onclick="mostrarCep()">
         <span class="bfo-icon">&#128666;</span>
-        <div><strong>Entrega pelos Correios</strong><small>PAC ou SEDEX &mdash; informe seu CEP</small></div>
+        <div><strong>Calcular frete</strong><small>Informe seu CEP para ver as opções</small></div>
       </button>
       <div id="cep-area" style="display:none;margin-top:4px">
         <div class="cep-row">
@@ -255,6 +263,15 @@ async function calcularFrete() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
 
   try {
+    const vcRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const vcData = await vcRes.json();
+    if (vcData.erro) throw new Error('CEP não encontrado.');
+
+    if (vcData.uf === 'RJ') {
+      resolverFreteRJ(vcData.bairro || '', vcData.localidade || '');
+      return;
+    }
+
     const res = await fetch('/api/frete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -436,6 +453,142 @@ function confirmarWpp() {
   }
 
   window.open(`https://wa.me/55${wppAdmin}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── entrega local rj ───────────────────────────────────────
+const BAIRROS_RJ = [
+  {nome:'Taquara',preco:10,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Tanque',preco:20,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Pechincha',preco:20,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Curicica',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Freguesia',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Vargens',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Barra da Tijuca',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Praça Seca',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Valqueire',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Madureira',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Cascadura',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Osvaldo Cruz',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Rocha Miranda',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Bento Ribeiro',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Marechal Hermes',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Magalhães Bastos',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Centro',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Vila Isabel',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'São Cristóvão',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Tijuca',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Andaraí',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Grajaú',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Zona Sul',preco:25,rota:'Segunda-Feira · Rota Verde'},
+  {nome:'Sulacap',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Realengo',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Bangu',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Campo Grande',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Santíssimo',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Senador Camará',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Cosmos',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Guaratiba',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Ilha de Guaratiba',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Paciência',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Padre Miguel',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Pedra de Guaratiba',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Santa Cruz',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Sepetiba',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Recreio',preco:25,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Itaguaí',preco:30,rota:'Terça-Feira · Rota Azul'},
+  {nome:'Niterói',preco:25,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Alcântara',preco:25,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'São Gonçalo',preco:25,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Fonseca',preco:25,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Icaraí',preco:25,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Maricá',preco:40,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Itaboraí',preco:40,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Itaipuaçu',preco:40,rota:'Quarta-Feira · Rota Roxa'},
+  {nome:'Região dos Lagos',preco:100,rota:'Quarta-Feira · Rota Roxa',obs:'2ª quarta-feira do mês'},
+  {nome:'Bonsucesso',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Duque de Caxias',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Coelho Neto',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Fragoso',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Ilha do Governador',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Inhaúma',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Irajá',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Magé',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Olaria',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Penha',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Piabetá',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Ramos',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Saracuruna',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vaz Lobo',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vigário Geral',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vila da Penha',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vista Alegre',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vila Kosmos',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Vicente de Carvalho',preco:25,rota:'Quinta-Feira · Rota Coral'},
+  {nome:'Anchieta',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Belford Roxo',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Eng. Pedreira',preco:30,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Guadalupe',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Japeri',preco:30,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Jardim América',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Queimados',preco:30,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Mesquita',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Nilópolis',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Nova Iguaçu',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Olinda',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Pavuna',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Rocha de Albuquerque',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'São João de Meriti',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Seropédica',preco:30,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Tomás Coelho',preco:25,rota:'Sexta-Feira · Rota Rosa'},
+  {nome:'Benfica',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Cachambi',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Caju',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Engenho Novo',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Méier',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Piedade',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Pilares',preco:25,rota:'Sábado · Rota Ouro'},
+  {nome:'Quintino',preco:25,rota:'Sábado · Rota Ouro'}
+];
+
+function resolverFreteRJ(bairro, localidade) {
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const bNorm = norm(bairro);
+  const found = bNorm ? BAIRROS_RJ.find(b => {
+    const rjNorm = norm(b.nome);
+    return rjNorm === bNorm || bNorm.includes(rjNorm) || rjNorm.includes(bNorm);
+  }) : null;
+
+  const diaMap = {
+    'Segunda-Feira':'Toda segunda-feira','Terça-Feira':'Toda terça-feira',
+    'Quarta-Feira':'Toda quarta-feira','Quinta-Feira':'Toda quinta-feira',
+    'Sexta-Feira':'Toda sexta-feira','Sábado':'Todo sábado'
+  };
+  const preco = found ? found.preco : 25;
+  const nomeExib = found ? found.nome : (bairro || localidade || 'Rio de Janeiro');
+  let prazo = '';
+  if (found) {
+    const dia = found.rota.split(' · ')[0];
+    prazo = found.obs ? 'Toda ' + found.obs : (diaMap[dia] || found.rota);
+  }
+
+  window._freteRJ = { servico: 'Entrega em ' + nomeExib, empresa: '', preco, prazo };
+  const el = document.getElementById('frete-resultados');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="frete-op" onclick="selecionarFreteRJ()">
+      <div>
+        <div class="fo-nome">Entrega em ${nomeExib}</div>
+        ${prazo ? `<div class="fo-prazo">${prazo}</div>` : ''}
+      </div>
+      <div class="fo-preco">${brl(preco)}</div>
+    </div>`;
+}
+
+function selecionarFreteRJ() {
+  if (!window._freteRJ) return;
+  frete = window._freteRJ;
+  renderFrete();
+  updateResumo();
 }
 
 // ── boot ───────────────────────────────────────────────────

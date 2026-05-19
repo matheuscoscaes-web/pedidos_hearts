@@ -568,7 +568,7 @@ async function enviarWpp() {
   let msg = `Olá${nome ? ' ' + nome : ''}! 👋\n\nAqui está seu pedido da *Hearts Couro* 🤎\n\n📦 *Itens:*\n`;
   pedItems.forEach(i => { msg += `• ${i.qtd}x ${i.nome}${i.cor ? ' (' + i.cor + ')' : ''} — ${brl(i.preco * i.qtd)}\n`; });
   msg += `\n💰 *Subtotal: ${brl(sub)}*`;
-  msg += `\n🚚 *Frete:* PAC, SEDEX ou retirada na loja`;
+  msg += `\n🚚 *Frete:* Entrega local RJ, Correios ou retirada na loja`;
   msg += `\n\n👇 Acesse para escolher o frete e pagar:\n${link}`;
   msg += `\n\nQualquer dúvida é só falar! 😊`;
 
