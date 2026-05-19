@@ -167,6 +167,21 @@ function buildPage(el) {
   renderItems();
   renderFrete();
   updateResumo();
+  carregarFotos();
+}
+
+async function carregarFotos() {
+  try {
+    const res = await fetch('/api/produtos');
+    const prods = await res.json();
+    const mapa = {};
+    prods.forEach(p => { mapa[p.id] = p.foto || ''; });
+    let atualizado = false;
+    items.forEach(item => {
+      if (mapa[item.id] && !item.foto) { item.foto = mapa[item.id]; atualizado = true; }
+    });
+    if (atualizado) renderItems();
+  } catch(e) {}
 }
 
 // ── itens ──────────────────────────────────────────────────
