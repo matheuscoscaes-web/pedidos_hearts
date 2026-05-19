@@ -21,6 +21,7 @@ async function initDB() {
       id        BIGSERIAL PRIMARY KEY,
       nome      VARCHAR(255) NOT NULL,
       cor       VARCHAR(100) DEFAULT '',
+      cores     TEXT         DEFAULT '[]',
       qtd       INTEGER      DEFAULT 0,
       preco     DECIMAL(10,2) NOT NULL,
       descricao TEXT         DEFAULT '',
@@ -28,6 +29,7 @@ async function initDB() {
       criado_em TIMESTAMPTZ  DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS cores TEXT DEFAULT '[]'`);
   console.log('✅ Banco de dados pronto.');
 }
 
@@ -45,6 +47,9 @@ app.get('/api/produtos', async (req, res) => {
     const { rows } = await pool.query(
       'SELECT * FROM produtos ORDER BY criado_em DESC'
     );
+    rows.forEach(r => {
+      try { r.cores = JSON.parse(r.cores || '[]'); } catch { r.cores = []; }
+    });
     res.json(rows);
   } catch (e) {
     console.error(e);
@@ -54,16 +59,19 @@ app.get('/api/produtos', async (req, res) => {
 
 app.post('/api/produtos', async (req, res) => {
   try {
-    const { nome, cor, qtd, preco, descricao, foto } = req.body;
+    const { nome, cores, qtd, preco, descricao, foto } = req.body;
     if (!nome || !preco)
       return res.status(400).json({ erro: 'Nome e preço são obrigatórios.' });
 
+    const coresJson = JSON.stringify(Array.isArray(cores) ? cores : []);
     const { rows } = await pool.query(
-      `INSERT INTO produtos (nome, cor, qtd, preco, descricao, foto)
+      `INSERT INTO produtos (nome, cores, qtd, preco, descricao, foto)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [nome, cor || '', parseInt(qtd) || 0, parseFloat(preco), descricao || '', foto || '']
+      [nome, coresJson, parseInt(qtd) || 0, parseFloat(preco), descricao || '', foto || '']
     );
-    res.json(rows[0]);
+    const row = rows[0];
+    try { row.cores = JSON.parse(row.cores || '[]'); } catch { row.cores = []; }
+    res.json(row);
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: 'Erro ao salvar produto.' });

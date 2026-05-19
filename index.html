@@ -14,7 +14,7 @@
     .sec-title{font-size:.75rem;font-weight:700;color:#9e7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
     .card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 1px 8px rgba(0,0,0,.07);margin-bottom:16px}
     .card h3{font-size:.95rem;color:#6b3a2a;font-weight:700;margin-bottom:14px}
-    /* itens do pedido */
+    /* itens */
     .oi{display:flex;align-items:center;gap:12px;padding:12px;background:#fdf6f0;border-radius:12px;margin-bottom:8px}
     .oi-emoji{width:46px;height:46px;background:#ede0d4;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0}
     .oi-info{flex:1}
@@ -24,11 +24,27 @@
     .oi-qtd{font-size:.82rem;color:#9e7060;background:#ede0d4;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block}
     .btn-rm{background:none;border:1.5px solid #f5c6c6;color:#c0392b;font-size:.78rem;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:8px;transition:all .2s;white-space:nowrap}
     .btn-rm:hover{background:#fde8e4;border-color:#c0392b}
-    /* frete */
+    /* frete escolhido */
     .frete-box{background:#f0faf4;border:1.5px solid #a8d5b5;border-radius:12px;padding:14px;display:flex;justify-content:space-between;align-items:center}
     .frete-box .fb-nome{font-weight:700;font-size:.9rem;color:#1b5e20}
     .frete-box .fb-prazo{font-size:.76rem;color:#2e7d32;margin-top:2px}
-    .frete-box .fb-preco{font-weight:700;color:#1b5e20;font-size:.95rem}
+    .frete-box .fb-preco{font-weight:700;color:#1b5e20;font-size:.95rem;white-space:nowrap}
+    /* frete seleção */
+    .btn-frete-op{width:100%;padding:13px 14px;border:1.5px solid #e0d4c8;border-radius:12px;background:#fff;font-size:.9rem;font-weight:600;color:#333;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;transition:all .2s;margin-bottom:8px;font-family:inherit}
+    .btn-frete-op:hover{border-color:#6b3a2a;background:#fdf6f0}
+    .btn-frete-op .bfo-icon{font-size:1.3rem;flex-shrink:0}
+    .btn-frete-op small{font-weight:400;color:#9e7060;display:block;margin-top:2px;font-size:.78rem}
+    .cep-row{display:flex;gap:8px;margin-top:10px}
+    .cep-row input{flex:1;border:1.5px solid #e0d4c8;border-radius:10px;padding:10px 12px;font-size:.9rem;color:#333;outline:none;transition:border-color .2s;font-family:inherit}
+    .cep-row input:focus{border-color:#6b3a2a}
+    .btn-calc-sm{padding:10px 16px;border:none;border-radius:10px;background:#6b3a2a;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+    .btn-calc-sm:disabled{opacity:.5;cursor:default}
+    .frete-op{border:1.5px solid #e0d4c8;border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px;transition:all .2s;display:flex;justify-content:space-between;align-items:center}
+    .frete-op:hover{border-color:#6b3a2a;background:#fdf6f0}
+    .frete-op .fo-nome{font-size:.88rem;font-weight:700;color:#333}
+    .frete-op .fo-prazo{font-size:.74rem;color:#9e7060;margin-top:2px}
+    .frete-op .fo-preco{font-weight:700;color:#6b3a2a;font-size:.9rem;white-space:nowrap}
+    .trocar-frete{background:none;border:none;color:#9e7060;font-size:.75rem;cursor:pointer;text-decoration:underline;margin-top:8px;display:inline-block;padding:0;font-family:inherit}
     /* resumo */
     .sum-linha{display:flex;justify-content:space-between;font-size:.88rem;color:#555;margin-bottom:8px}
     .sum-total{display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;color:#6b3a2a;border-top:1.5px solid #eee;padding-top:10px;margin-top:4px}
@@ -59,7 +75,7 @@
 </header>
 
 <div class="container" id="page-content">
-  <div class="page-msg"><div class="pm-icon">⏳</div><p>Carregando pedido...</p></div>
+  <div class="page-msg"><div class="pm-icon">&#9203;</div><p>Carregando pedido...</p></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -73,6 +89,11 @@ function toast(msg, cor) {
 }
 function brl(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
 function decodeData(str) { return JSON.parse(decodeURIComponent(escape(atob(str)))); }
+function maskCep(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,8);
+  if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
+  el.value = v;
+}
 
 // ── estado ─────────────────────────────────────────────────
 let ORDER    = null;
@@ -94,7 +115,7 @@ function renderPage() {
   const el = document.getElementById('page-content');
 
   if (!ORDER || !ORDER.items) {
-    el.innerHTML = `<div class="page-msg"><div class="pm-icon">😕</div><p>Link de pedido inválido ou expirado.<br/>Entre em contato pelo WhatsApp.</p></div>`;
+    el.innerHTML = `<div class="page-msg"><div class="pm-icon">&#128533;</div><p>Link de pedido inválido ou expirado.<br/>Entre em contato pelo WhatsApp.</p></div>`;
     return;
   }
 
@@ -114,32 +135,29 @@ function buildPage(el) {
     <div class="sec-title">Itens do seu pedido</div>
     <div id="oi-list"></div>
 
-    ${frete ? `
     <div class="card">
-      <h3>Frete</h3>
-      <div class="frete-box">
-        <div>
-          <div class="fb-nome">${frete.servico}${frete.empresa ? ' · ' + frete.empresa : ''}</div>
-          ${frete.prazo ? `<div class="fb-prazo">${frete.prazo}</div>` : ''}
-        </div>
-        <div class="fb-preco">${brl(frete.preco)}</div>
-      </div>
-    </div>` : ''}
+      <h3>Entrega</h3>
+      <div id="frete-inner"></div>
+    </div>
 
     <div class="card">
       <div class="sum-linha"><span id="r-qtd-label">Itens</span><span id="r-sub"></span></div>
-      ${frete ? `<div class="sum-linha"><span>Frete (${frete.servico})</span><span>${brl(frete.preco)}</span></div>` : ''}
+      <div class="sum-linha" id="r-frete-linha" style="display:none">
+        <span id="r-frete-lbl">Frete</span>
+        <span id="r-frete-val"></span>
+      </div>
       <div class="sum-total"><span>Total</span><span id="r-total"></span></div>
     </div>
 
     <div id="warn-mod" style="display:none" class="warn">
-      ✏️ Você removeu um item. Clique em pagar para confirmar o valor atualizado.
+      &#9999;&#65039; Você removeu um item. Clique em pagar para confirmar o valor atualizado.
     </div>
 
     <div id="pag-area"></div>
   `;
 
   renderItems();
+  renderFrete();
   updateResumo();
 }
 
@@ -155,7 +173,7 @@ function renderItems() {
 
   el.innerHTML = items.map((item, i) => `
     <div class="oi">
-      <div class="oi-emoji">👜</div>
+      <div class="oi-emoji">&#128156;</div>
       <div class="oi-info">
         <strong>${item.nome}</strong>
         ${item.cor ? `<div class="oi-sub">${item.cor}</div>` : ''}
@@ -175,6 +193,122 @@ function removerItem(i) {
   updateResumo();
 }
 
+// ── frete ──────────────────────────────────────────────────
+function renderFrete() {
+  const el = document.getElementById('frete-inner');
+  if (!el) return;
+
+  if (frete) {
+    el.innerHTML = `
+      <div class="frete-box">
+        <div>
+          <div class="fb-nome">${frete.servico}${frete.empresa ? ' &middot; ' + frete.empresa : ''}</div>
+          ${frete.prazo ? `<div class="fb-prazo">${frete.prazo}</div>` : ''}
+        </div>
+        <div class="fb-preco">${frete.preco > 0 ? brl(frete.preco) : 'Gr&aacute;tis'}</div>
+      </div>
+      ${!ORDER.frete ? `<button class="trocar-frete" onclick="trocarFrete()">Trocar opção de entrega</button>` : ''}
+    `;
+    return;
+  }
+
+  el.innerHTML = `
+    <div id="frete-sel-area">
+      <button class="btn-frete-op" onclick="escolherRetirada()">
+        <span class="bfo-icon">&#127978;</span>
+        <div><strong>Retirar na loja</strong><small>Gr&aacute;tis &middot; Combinar hor&aacute;rio</small></div>
+      </button>
+      <button class="btn-frete-op" id="btn-op-correios" onclick="mostrarCep()">
+        <span class="bfo-icon">&#128666;</span>
+        <div><strong>Entrega pelos Correios</strong><small>PAC ou SEDEX &mdash; informe seu CEP</small></div>
+      </button>
+      <div id="cep-area" style="display:none;margin-top:4px">
+        <div class="cep-row">
+          <input type="text" id="cep-input" placeholder="00000-000" maxlength="9" oninput="maskCep(this)" inputmode="numeric"/>
+          <button class="btn-calc-sm" id="btn-calc-frete" onclick="calcularFrete()">Calcular</button>
+        </div>
+        <div id="frete-resultados" style="margin-top:10px"></div>
+      </div>
+    </div>
+  `;
+}
+
+function escolherRetirada() {
+  frete = { servico: 'Retirada na loja', empresa: '', preco: 0, prazo: 'Combinar horário' };
+  renderFrete();
+  updateResumo();
+}
+
+function mostrarCep() {
+  const btn = document.getElementById('btn-op-correios');
+  const area = document.getElementById('cep-area');
+  if (btn) btn.style.display = 'none';
+  if (area) area.style.display = 'block';
+}
+
+async function calcularFrete() {
+  const input = document.getElementById('cep-input');
+  const cep = input ? input.value.replace(/\D/g, '') : '';
+  if (cep.length !== 8) { toast('CEP inválido', '#e74c3c'); return; }
+
+  const btn = document.getElementById('btn-calc-frete');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>'; }
+
+  try {
+    const res = await fetch('/api/frete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cep_destino: cep })
+    });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+
+    const ops = Array.isArray(data) ? data.filter(o =>
+      !o.error && o.price && /^(PAC|SEDEX)/i.test(o.name)
+    ) : [];
+
+    if (!ops.length) throw new Error('PAC e SEDEX não disponíveis para esse CEP.');
+
+    renderOpcoesCorreios(ops);
+  } catch(e) {
+    toast(e.message, '#e74c3c');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Calcular'; }
+  }
+}
+
+function renderOpcoesCorreios(ops) {
+  window._freteOps = ops;
+  const el = document.getElementById('frete-resultados');
+  if (!el) return;
+  el.innerHTML = ops.map((o, i) => `
+    <div class="frete-op" onclick="selecionarCorreios(${i})">
+      <div>
+        <div class="fo-nome">${o.name}</div>
+        <div class="fo-prazo">${o.delivery_time} dias &uacute;teis</div>
+      </div>
+      <div class="fo-preco">${brl(o.price)}</div>
+    </div>`).join('');
+}
+
+function selecionarCorreios(i) {
+  const o = window._freteOps[i];
+  frete = {
+    servico: o.name,
+    empresa: o.company?.name || 'Correios',
+    preco: parseFloat(o.price),
+    prazo: o.delivery_time + ' dias úteis'
+  };
+  renderFrete();
+  updateResumo();
+}
+
+function trocarFrete() {
+  frete = null;
+  renderFrete();
+  updateResumo();
+}
+
 // ── resumo ─────────────────────────────────────────────────
 function updateResumo() {
   const sub   = items.reduce((s, i) => s + i.preco * i.qtd, 0);
@@ -187,6 +321,19 @@ function updateResumo() {
   if (subEl) subEl.textContent = brl(sub);
   const totEl = document.getElementById('r-total');
   if (totEl) totEl.textContent = brl(total);
+
+  const freteLinha = document.getElementById('r-frete-linha');
+  if (freteLinha) {
+    if (frete) {
+      freteLinha.style.display = '';
+      const lbl2 = document.getElementById('r-frete-lbl');
+      const val  = document.getElementById('r-frete-val');
+      if (lbl2) lbl2.textContent = frete.servico === 'Retirada na loja' ? 'Retirada na loja' : `Frete (${frete.servico})`;
+      if (val)  val.textContent  = frete.preco > 0 ? brl(frete.preco) : 'Grátis';
+    } else {
+      freteLinha.style.display = 'none';
+    }
+  }
 
   renderPagArea(total);
 }
@@ -204,6 +351,14 @@ function renderPagArea(total) {
     return;
   }
 
+  if (!frete) {
+    el.innerHTML = `
+      <div class="warn" style="text-align:center;margin-bottom:0">
+        &#9757;&#65039; Escolha uma opção de entrega acima para continuar.
+      </div>`;
+    return;
+  }
+
   el.innerHTML = `
     <button class="btn btn-mp" id="btn-pagar" onclick="pagar()">
       <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
@@ -212,22 +367,21 @@ function renderPagArea(total) {
 }
 
 async function pagar() {
-  if (!items.length) return;
+  if (!items.length || !frete) return;
 
   const btn = document.getElementById('btn-pagar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Aguarde...';
 
   try {
-    // Se não foi modificado, usa o link já gerado pelo admin
-    if (!modified && ORDER.mp_link) {
+    // Usa link pré-gerado apenas se o frete já veio do admin (formato antigo)
+    if (!modified && ORDER.mp_link && ORDER.frete) {
       window.open(ORDER.mp_link, '_blank');
       btn.disabled = false;
       btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
       return;
     }
 
-    // Se removeu itens, gera novo link com valor atualizado
     const mpItems = items.map(i => ({
       id: String(i.id),
       title: i.nome + (i.cor ? ' - ' + i.cor : ''),
@@ -252,7 +406,6 @@ async function pagar() {
     window.open(data.mp_link, '_blank');
   } catch(e) {
     toast('Erro ao gerar pagamento. Confirme pelo WhatsApp.', '#e74c3c');
-    // fallback: WhatsApp
     const el = document.getElementById('pag-area');
     if (el) el.innerHTML += `
       <button class="btn btn-wpp" onclick="confirmarWpp()" style="margin-top:8px">
@@ -268,15 +421,15 @@ async function pagar() {
 
 function confirmarWpp() {
   if (!wppAdmin) { toast('WhatsApp da loja não encontrado', '#e74c3c'); return; }
-  const sub   = items.reduce((s, i) => s + i.preco * i.qtd, 0);
-  const total = sub + (frete ? frete.preco : 0);
+  const sub    = items.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const total  = sub + (frete ? frete.preco : 0);
   const cliente = ORDER?.cliente || '';
 
   let msg = `Olá! ${cliente ? 'Sou ' + cliente + '. ' : ''}Preciso de ajuda com meu pedido da *Hearts Couro* 🤎`;
   if (items.length) {
-    msg += `\n\n📦 *Itens restantes:*\n`;
+    msg += `\n\n📦 *Itens:*\n`;
     items.forEach(i => { msg += `• ${i.qtd}x ${i.nome}${i.cor ? ' (' + i.cor + ')' : ''} — ${brl(i.preco * i.qtd)}\n`; });
-    if (frete) msg += `\n🚚 *Frete:* ${frete.servico} — ${brl(frete.preco)}\n`;
+    if (frete) msg += `\n🚚 *Entrega:* ${frete.servico}${frete.preco > 0 ? ' — ' + brl(frete.preco) : ' (Grátis)'}\n`;
     msg += `\n💰 *Total: ${brl(total)}*`;
   } else {
     msg += `\n\nRemovi todos os itens do pedido.`;

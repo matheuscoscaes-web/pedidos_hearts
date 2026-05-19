@@ -49,13 +49,6 @@
     .qtd-ctrl button{width:26px;height:26px;border-radius:50%;border:1.5px solid #ddc9b9;background:#fff;font-size:.9rem;font-weight:700;color:#6b3a2a;cursor:pointer;display:flex;align-items:center;justify-content:center}
     .qtd-ctrl span{font-size:.9rem;font-weight:700;min-width:18px;text-align:center}
     .btn-rm{background:none;border:none;color:#c0392b;font-size:1rem;cursor:pointer;padding:4px}
-    /* freight */
-    .frete-op{border:1.5px solid #e0d4c8;border-radius:10px;padding:10px 14px;cursor:pointer;margin-bottom:8px;transition:all .2s;display:flex;justify-content:space-between;align-items:center}
-    .frete-op:hover{border-color:#6b3a2a}.frete-op.sel{border-color:#6b3a2a;background:#fdf6f0}
-    .frete-op .fo-nome{font-size:.88rem;font-weight:600;color:#333}
-    .frete-op .fo-prazo{font-size:.74rem;color:#9e7060}
-    .frete-op .fo-preco{font-weight:700;color:#6b3a2a}
-    .frete-sel-box{background:#f0faf4;border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
     /* summary */
     .sum-linha{display:flex;justify-content:space-between;font-size:.88rem;color:#555;margin-bottom:8px}
     .sum-total{display:flex;justify-content:space-between;font-size:1.05rem;font-weight:700;color:#6b3a2a;border-top:1.5px solid #eee;padding-top:10px;margin-top:4px}
@@ -83,6 +76,25 @@
     /* notice */
     .notice{background:#fff8e1;border:1.5px solid #ffe082;border-radius:10px;padding:12px 14px;font-size:.8rem;color:#7b6000;margin-bottom:14px;line-height:1.5}
     .notice strong{display:block;margin-bottom:3px}
+    /* frete info */
+    .frete-info{background:#f0f4ff;border:1.5px solid #b8cdf8;border-radius:10px;padding:12px 14px;font-size:.82rem;color:#3a4e8c;display:flex;align-items:center;gap:10px}
+    /* cores chips */
+    .cores-wrap{border:1.5px solid #e0d4c8;border-radius:10px;padding:8px 10px;background:#fff;cursor:text;transition:border-color .2s}
+    .cores-wrap:focus-within{border-color:#6b3a2a}
+    .cores-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;min-height:4px}
+    .core-chip{background:#ede0d4;color:#6b3a2a;border-radius:20px;padding:4px 10px 4px 12px;font-size:.78rem;display:flex;align-items:center;gap:4px;font-weight:600}
+    .core-chip button{background:none;border:none;color:#9e7060;cursor:pointer;font-size:.9rem;padding:0;line-height:1;display:flex;align-items:center}
+    .cores-add{display:flex;gap:6px;align-items:center}
+    .cores-add input{border:none;outline:none;font-size:.88rem;flex:1;background:transparent;font-family:inherit;color:#333;padding:2px 0}
+    .cores-add button{background:#6b3a2a;color:#fff;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    /* modal cor */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+    .modal-sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:80vh;overflow-y:auto}
+    .modal-sheet h3{font-size:1rem;color:#6b3a2a;margin-bottom:4px;font-weight:700}
+    .modal-sheet p{font-size:.78rem;color:#9e7060;margin-bottom:14px}
+    .cor-btn{width:100%;padding:13px 16px;border:1.5px solid #e0d4c8;border-radius:12px;background:#fff;font-size:.9rem;font-weight:600;color:#333;cursor:pointer;text-align:left;margin-bottom:8px;font-family:inherit;transition:all .2s}
+    .cor-btn:hover{border-color:#6b3a2a;background:#fdf6f0}
+    .btn-cancelar-modal{width:100%;padding:12px;border:none;border-radius:12px;background:#f5f0eb;color:#6b3a2a;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit}
   </style>
 </head>
 <body>
@@ -93,8 +105,8 @@
 </header>
 
 <div class="tab-nav">
-  <button class="tab-btn ativo" onclick="showTab('pedido',this)">📦 Novo Pedido</button>
-  <button class="tab-btn" onclick="showTab('produtos',this)">🏷️ Produtos</button>
+  <button class="tab-btn ativo" onclick="showTab('pedido',this)">&#128230; Novo Pedido</button>
+  <button class="tab-btn" onclick="showTab('produtos',this)">&#127991;&#65039; Produtos</button>
 </div>
 
 <div class="container">
@@ -116,53 +128,29 @@
 
     <div class="card">
       <div class="card-title"><span class="step">2</span>Produtos do pedido</div>
+      <div class="form-group" style="margin-bottom:12px">
+        <input type="text" id="busca-prod" placeholder="&#128269; Buscar produto pelo nome..." oninput="filtrarGrid()" style="background:#f9f5f2"/>
+      </div>
       <div id="prod-grid" class="prod-grid">
         <div class="empty" style="grid-column:span 2">Carregando produtos...</div>
       </div>
       <div id="oi-list"></div>
     </div>
 
-    <div class="card">
-      <div class="card-title"><span class="step">3</span>Frete</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="text" id="cep-cli" placeholder="CEP do cliente  00000-000" maxlength="9" oninput="maskCep(this)" style="flex:1"/>
-        <button class="btn btn-outline btn-sm" id="btn-calc" onclick="calcFrete()">Calcular</button>
-      </div>
-      <div id="frete-lista" style="display:none"></div>
-      <div id="frete-manual" style="display:none">
-        <div class="row2" style="margin-bottom:10px">
-          <div><label>Valor (R$)</label><input type="number" id="fm-valor" placeholder="0,00" min="0" step=".01"/></div>
-          <div><label>Serviço</label><input type="text" id="fm-serv" placeholder="Ex: SEDEX"/></div>
-        </div>
-        <div class="form-group"><label>Prazo</label><input type="text" id="fm-prazo" placeholder="Ex: 5 dias úteis"/></div>
-        <button class="btn btn-outline btn-sm" onclick="confirmarManual()">Confirmar frete</button>
-      </div>
-      <div id="frete-sel" style="display:none">
-        <div class="frete-sel-box">
-          <div>
-            <div style="font-weight:700;font-size:.9rem" id="fs-nome"></div>
-            <div style="font-size:.74rem;color:#9e7060" id="fs-prazo"></div>
-          </div>
-          <div style="font-weight:700;color:#6b3a2a" id="fs-preco"></div>
-        </div>
-        <button class="btn btn-outline btn-sm" style="width:auto;margin-top:8px" onclick="resetFrete()">Alterar frete</button>
-      </div>
-    </div>
-
     <div class="card" id="card-resumo" style="display:none">
-      <div class="card-title"><span class="step">4</span>Resumo e envio</div>
+      <div class="card-title"><span class="step">3</span>Resumo e envio</div>
       <div class="sum-linha"><span>Subtotal</span><span id="r-sub"></span></div>
-      <div class="sum-linha"><span id="r-frete-lbl">Frete</span><span id="r-frete"></span></div>
-      <div class="sum-total"><span>Total</span><span id="r-total"></span></div>
+      <div class="sum-linha" style="color:#9e7060;font-style:italic"><span>Frete</span><span>Cliente escolhe no link</span></div>
+      <div class="sum-total"><span>Total (sem frete)</span><span id="r-total"></span></div>
       <br/>
-      <button class="btn btn-primary" id="btn-mp" onclick="gerarMP()">Gerar link de pagamento (Mercado Pago)</button>
-      <div id="btn-sem-mp" style="display:none;margin-top:10px">
-        <button class="btn btn-outline" onclick="gerarSemMP()">Gerar link sem pagamento MP</button>
+      <div class="frete-info" style="margin-bottom:14px">
+        &#128666; O cliente escolherá PAC, SEDEX ou retirada na loja diretamente no link do pedido.
       </div>
-      <div id="link-box" style="display:none;margin-top:16px">
-        <div class="link-box"><p>Link do pedido para o cliente:</p><div class="link-text" id="link-txt"></div></div>
-        <button class="btn btn-green" onclick="enviarWpp()">&#128740; Enviar pelo WhatsApp</button>
-        <button class="btn btn-outline" style="margin-top:8px" onclick="copiarLink()">Copiar link</button>
+      <button class="btn btn-green" onclick="enviarWpp()">&#128740; Enviar pelo WhatsApp</button>
+      <button class="btn btn-outline" style="margin-top:10px" id="btn-mp" onclick="gerarMP()">&#128179; Incluir link Mercado Pago (opcional)</button>
+      <div id="link-box" style="display:none;margin-top:12px">
+        <div class="link-box"><p>Link de pagamento gerado:</p><div class="link-text" id="link-txt"></div></div>
+        <button class="btn btn-outline" onclick="copiarLink()">Copiar link</button>
       </div>
     </div>
 
@@ -172,7 +160,7 @@
   <div id="tab-produtos" class="tab-panel">
 
     <div class="notice">
-      <strong>💾 Onde ficam salvos os produtos?</strong>
+      <strong>&#128190; Onde ficam salvos os produtos?</strong>
       No banco de dados PostgreSQL configurado no servidor. Nunca somem, independente do navegador ou dispositivo.
     </div>
 
@@ -183,17 +171,24 @@
         <label>Foto</label>
         <div class="foto-up" onclick="document.getElementById('inp-foto').click()">
           <input type="file" id="inp-foto" accept="image/*" onchange="prevFoto(event)"/>
-          <div class="fu-icon">📷</div>
+          <div class="fu-icon">&#128247;</div>
           <p>Toque para escolher uma foto</p>
         </div>
         <img id="preview-img" alt="preview"/>
       </div>
 
       <div class="form-group"><label>Nome</label><input type="text" id="p-nome" placeholder="Ex: Bolsa de couro"/></div>
-      <div class="row2">
-        <div class="form-group"><label>Cor</label><input type="text" id="p-cor" placeholder="Ex: Marrom"/></div>
-        <div class="form-group"><label>Qtd estoque</label><input type="number" id="p-qtd" placeholder="0" min="0"/></div>
+      <div class="form-group">
+        <label>Cores disponíveis</label>
+        <div class="cores-wrap" onclick="document.getElementById('inp-cor-nova').focus()">
+          <div class="cores-chips" id="cores-chips"></div>
+          <div class="cores-add">
+            <input type="text" id="inp-cor-nova" placeholder="Ex: Marrom — pressione Enter para adicionar" onkeydown="corKeydown(event)"/>
+            <button type="button" onclick="addCor()" title="Adicionar cor">+</button>
+          </div>
+        </div>
       </div>
+      <div class="form-group"><label>Qtd estoque</label><input type="number" id="p-qtd" placeholder="0" min="0"/></div>
       <div class="form-group"><label>Preço (R$)</label><input type="number" id="p-preco" placeholder="0,00" min="0" step=".01"/></div>
       <div class="form-group"><label>Descrição</label><textarea id="p-desc" placeholder="Materiais, tamanho, detalhes..."></textarea></div>
 
@@ -209,6 +204,15 @@
 
 </div>
 
+<div id="modal-cores" style="display:none" class="modal-overlay">
+  <div class="modal-sheet">
+    <h3 id="modal-prod-nome">Escolha a cor</h3>
+    <p>Selecione a cor para adicionar ao pedido</p>
+    <div id="modal-cores-lista"></div>
+    <button class="btn-cancelar-modal" onclick="fecharModalCores()">Cancelar</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -219,12 +223,6 @@ function toast(msg, cor) {
   t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
 }
 function brl(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
-function maskCep(el) {
-  let v = el.value.replace(/\D/g,'').slice(0,8);
-  if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
-  el.value = v;
-}
-function encodeData(obj) { return btoa(unescape(encodeURIComponent(JSON.stringify(obj)))); }
 
 // ── tabs ───────────────────────────────────────────────────
 function showTab(id, btn) {
@@ -234,7 +232,7 @@ function showTab(id, btn) {
   if (btn) btn.classList.add('ativo');
 }
 
-// ── api config (base_url e wpp_admin vêm do .env no servidor) ─
+// ── api config ─────────────────────────────────────────────
 let apiCfg = null;
 async function getApiCfg() {
   if (apiCfg) return apiCfg;
@@ -250,6 +248,37 @@ async function getApiCfg() {
 // ── produtos ───────────────────────────────────────────────
 let prodsCache = [];
 let fotoB64 = '';
+let coresAtivas = [];
+
+function addCor() {
+  const inp = document.getElementById('inp-cor-nova');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (coresAtivas.map(c => c.toLowerCase()).includes(val.toLowerCase())) {
+    toast('Cor já adicionada', '#f39c12'); return;
+  }
+  coresAtivas.push(val);
+  inp.value = '';
+  inp.focus();
+  renderCoresChips();
+}
+
+function removeCor(i) {
+  coresAtivas.splice(i, 1);
+  renderCoresChips();
+}
+
+function corKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); addCor(); }
+}
+
+function renderCoresChips() {
+  const el = document.getElementById('cores-chips');
+  if (!el) return;
+  el.innerHTML = coresAtivas.map((c, i) => `
+    <span class="core-chip">${c}<button type="button" onclick="removeCor(${i})" title="Remover">&#215;</button></span>
+  `).join('');
+}
 
 async function loadProds() {
   try {
@@ -270,7 +299,6 @@ async function refreshProds() {
 async function prevFoto(e) {
   const file = e.target.files[0];
   if (!file) return;
-  // Redimensiona para no máx 600×600 antes de converter
   fotoB64 = await resizeImg(file, 600, 600, 0.78);
   const img = document.getElementById('preview-img');
   img.src = fotoB64; img.style.display = 'block';
@@ -309,7 +337,7 @@ async function salvarProd() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nome, cor: document.getElementById('p-cor').value.trim(),
+        nome, cores: coresAtivas,
         qtd: parseInt(document.getElementById('p-qtd').value) || 0,
         preco, descricao: document.getElementById('p-desc').value.trim(),
         foto: fotoB64
@@ -318,10 +346,12 @@ async function salvarProd() {
     const data = await res.json();
     if (data.erro) throw new Error(data.erro);
 
-    ['p-nome','p-cor','p-qtd','p-preco','p-desc'].forEach(id => document.getElementById(id).value = '');
+    ['p-nome','p-qtd','p-preco','p-desc'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('inp-foto').value = '';
     document.getElementById('preview-img').style.display = 'none';
     fotoB64 = '';
+    coresAtivas = [];
+    renderCoresChips();
 
     await refreshProds();
     toast('Produto cadastrado!');
@@ -347,23 +377,35 @@ async function delProd(id) {
 function renderListaProd() {
   const el = document.getElementById('lista-prod');
   if (!prodsCache.length) { el.innerHTML = '<div class="empty">Nenhum produto cadastrado.</div>'; return; }
-  el.innerHTML = prodsCache.map(p => `
+  el.innerHTML = prodsCache.map(p => {
+    const cores = Array.isArray(p.cores) ? p.cores : [];
+    const coresStr = cores.length ? cores.join(', ') + ' &middot; ' : '';
+    return `
     <div class="pi">
       ${p.foto
         ? `<img src="${p.foto}" alt="${p.nome}" onerror="this.style.display='none'"/>`
-        : `<div class="pi-sem-foto">👜</div>`}
+        : `<div class="pi-sem-foto">&#128156;</div>`}
       <div class="pi-info">
         <strong>${p.nome}</strong>
-        <span>${p.cor ? p.cor + ' · ' : ''}Qtd: ${p.qtd} · ${brl(p.preco)}</span>
+        <span>${coresStr}Qtd: ${p.qtd} &middot; ${brl(p.preco)}</span>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="delProd(${p.id})">✕</button>
-    </div>`).join('');
+      <button class="btn btn-outline btn-sm" onclick="delProd(${p.id})">&#10005;</button>
+    </div>`;
+  }).join('');
 }
 
 // ── novo pedido ────────────────────────────────────────────
-let pedItems = []; // [{id,nome,cor,preco,qtd}]
-let freteAtual = null;
+let pedItems = [];
 let mpLinkGerado = '';
+
+function filtrarGrid() {
+  const termo = (document.getElementById('busca-prod')?.value || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('#prod-grid .prod-card');
+  cards.forEach(card => {
+    const nome = card.querySelector('.pc-nome')?.textContent.toLowerCase() || '';
+    card.style.display = nome.includes(termo) ? '' : 'none';
+  });
+}
 
 function renderGrid() {
   const el = document.getElementById('prod-grid');
@@ -371,24 +413,60 @@ function renderGrid() {
     el.innerHTML = '<div class="empty" style="grid-column:span 2">Nenhum produto cadastrado. Vá em Produtos.</div>';
     return;
   }
-  el.innerHTML = prodsCache.map((p, i) => `
+  el.innerHTML = prodsCache.map((p, i) => {
+    const cores = Array.isArray(p.cores) ? p.cores : [];
+    const subTxt = cores.length
+      ? cores.length + ' cor' + (cores.length > 1 ? 'es' : '')
+      : '';
+    return `
     <div class="prod-card ${p.qtd == 0 ? 'sem-estoque' : ''}" onclick="addItem(${i})">
       ${p.foto
         ? `<img src="${p.foto}" alt="${p.nome}"/>`
-        : `<div class="pc-sem-foto">👜</div>`}
+        : `<div class="pc-sem-foto">&#128156;</div>`}
       <div class="pc-body">
         <div class="pc-nome">${p.nome}</div>
-        <div class="pc-sub">${p.cor || ''}${p.qtd == 0 ? ' · Sem estoque' : ''}</div>
+        <div class="pc-sub">${subTxt}${p.qtd == 0 ? (subTxt ? ' &middot; ' : '') + 'Sem estoque' : ''}</div>
         <div class="pc-preco">${brl(p.preco)}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
+let _modalIdx = null;
+let _modalCores = [];
 
 function addItem(idx) {
   const p = prodsCache[idx];
-  const ex = pedItems.find(i => i.id === p.id);
+  const cores = Array.isArray(p.cores) ? p.cores : [];
+
+  if (cores.length > 1) {
+    _modalIdx = idx;
+    _modalCores = cores;
+    document.getElementById('modal-prod-nome').textContent = p.nome;
+    document.getElementById('modal-cores-lista').innerHTML = cores.map((c, i) => `
+      <button class="cor-btn" onclick="confirmarCor(${i})">&#9679; ${c}</button>
+    `).join('');
+    document.getElementById('modal-cores').style.display = 'flex';
+  } else {
+    addItemComCor(idx, cores[0] || '');
+  }
+}
+
+function confirmarCor(i) {
+  fecharModalCores();
+  if (_modalIdx !== null) addItemComCor(_modalIdx, _modalCores[i]);
+  _modalIdx = null;
+}
+
+function fecharModalCores() {
+  document.getElementById('modal-cores').style.display = 'none';
+}
+
+function addItemComCor(idx, cor) {
+  const p = prodsCache[idx];
+  const ex = pedItems.find(i => i.id === p.id && i.cor === cor);
   if (ex) ex.qtd++;
-  else pedItems.push({ id: p.id, nome: p.nome, cor: p.cor || '', preco: parseFloat(p.preco), qtd: 1 });
+  else pedItems.push({ id: p.id, nome: p.nome, cor: cor, preco: parseFloat(p.preco), qtd: 1 });
   renderItems(); updateResumo();
 }
 
@@ -404,108 +482,27 @@ function renderItems() {
   el.innerHTML = '<div style="border-top:1px solid #eee;margin:8px 0 4px"></div>' +
     pedItems.map((item, i) => `
       <div class="oi">
-        <div class="oi-sem-foto">👜</div>
+        <div class="oi-sem-foto">&#128156;</div>
         <div class="oi-info">
           <strong>${item.nome}</strong>
-          <span>${item.cor || ''} · ${brl(item.preco)}</span>
+          <span>${item.cor || ''} &middot; ${brl(item.preco)}</span>
         </div>
         <div class="qtd-ctrl">
-          <button onclick="chgQtd(${i},-1)">−</button>
+          <button onclick="chgQtd(${i},-1)">&#8722;</button>
           <span>${item.qtd}</span>
           <button onclick="chgQtd(${i},+1)">+</button>
         </div>
-        <button class="btn-rm" onclick="chgQtd(${i},-999)">✕</button>
+        <button class="btn-rm" onclick="chgQtd(${i},-999)">&#10005;</button>
       </div>`).join('');
 }
 
 function updateResumo() {
   const sub = pedItems.reduce((s, i) => s + i.preco * i.qtd, 0);
-  const total = sub + (freteAtual ? freteAtual.preco : 0);
   document.getElementById('r-sub').textContent = brl(sub);
-  document.getElementById('r-frete').textContent = freteAtual ? brl(freteAtual.preco) : 'A calcular';
-  document.getElementById('r-frete-lbl').textContent = freteAtual ? `Frete (${freteAtual.servico})` : 'Frete';
-  document.getElementById('r-total').textContent = brl(total);
+  document.getElementById('r-total').textContent = brl(sub);
   document.getElementById('card-resumo').style.display = pedItems.length ? 'block' : 'none';
   mpLinkGerado = '';
   document.getElementById('link-box').style.display = 'none';
-  document.getElementById('btn-sem-mp').style.display = 'none';
-}
-
-// ── frete ──────────────────────────────────────────────────
-async function calcFrete() {
-  const cep = document.getElementById('cep-cli').value.replace(/\D/g, '');
-  if (cep.length !== 8) { toast('CEP inválido', '#e74c3c'); return; }
-
-  const btn = document.getElementById('btn-calc');
-  btn.disabled = true; btn.innerHTML = '<span class="spin" style="border-top-color:#6b3a2a"></span>';
-
-  try {
-    const res = await fetch('/api/frete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cep_destino: cep })
-    });
-    const data = await res.json();
-    if (data.erro) throw new Error(data.erro);
-    const ops = Array.isArray(data) ? data.filter(s => !s.error && s.price) : [];
-    if (!ops.length) throw new Error('Nenhuma opção disponível para esse CEP');
-    renderFretes(ops);
-  } catch(e) {
-    toast('Não calculou: ' + e.message, '#f39c12');
-    document.getElementById('frete-manual').style.display = 'block';
-  } finally {
-    btn.disabled = false; btn.textContent = 'Calcular';
-  }
-}
-
-function renderFretes(ops) {
-  const el = document.getElementById('frete-lista');
-  el.style.display = 'block';
-  el.innerHTML = ops.slice(0, 6).map((o, i) => `
-    <div class="frete-op" id="fo-${i}" onclick="selFrete(${i})"
-         data-servico="${o.name}" data-empresa="${o.company?.name || ''}"
-         data-preco="${o.price}" data-prazo="${o.delivery_time} dias úteis">
-      <div>
-        <div class="fo-nome">${o.name} <small style="color:#9e7060">${o.company?.name || ''}</small></div>
-        <div class="fo-prazo">${o.delivery_time} dias úteis</div>
-      </div>
-      <div class="fo-preco">${brl(o.price)}</div>
-    </div>`).join('');
-}
-
-function selFrete(i) {
-  document.querySelectorAll('.frete-op').forEach(e => e.classList.remove('sel'));
-  const el = document.getElementById('fo-' + i);
-  el.classList.add('sel');
-  freteAtual = { servico: el.dataset.servico, empresa: el.dataset.empresa, preco: parseFloat(el.dataset.preco), prazo: el.dataset.prazo };
-  document.getElementById('frete-lista').style.display = 'none';
-  showFreteBox();
-}
-
-function confirmarManual() {
-  const v = parseFloat(document.getElementById('fm-valor').value);
-  if (!v && v !== 0) { toast('Informe o valor', '#e74c3c'); return; }
-  freteAtual = {
-    servico: document.getElementById('fm-serv').value.trim() || 'Entrega',
-    empresa: '', preco: v,
-    prazo: document.getElementById('fm-prazo').value.trim()
-  };
-  document.getElementById('frete-manual').style.display = 'none';
-  showFreteBox();
-}
-
-function showFreteBox() {
-  document.getElementById('fs-nome').textContent = freteAtual.servico + (freteAtual.empresa ? ' · ' + freteAtual.empresa : '');
-  document.getElementById('fs-prazo').textContent = freteAtual.prazo;
-  document.getElementById('fs-preco').textContent = brl(freteAtual.preco);
-  document.getElementById('frete-sel').style.display = 'block';
-  updateResumo();
-}
-
-function resetFrete() {
-  freteAtual = null;
-  ['frete-sel','frete-lista','frete-manual'].forEach(id => document.getElementById(id).style.display = 'none');
-  updateResumo();
 }
 
 // ── mercado pago ───────────────────────────────────────────
@@ -520,9 +517,6 @@ async function gerarMP() {
       id: String(i.id), title: i.nome + (i.cor ? ' - ' + i.cor : ''),
       quantity: i.qtd, unit_price: i.preco, currency_id: 'BRL'
     }));
-    if (freteAtual && freteAtual.preco > 0) {
-      mpItems.push({ id: 'frete', title: 'Frete - ' + freteAtual.servico, quantity: 1, unit_price: freteAtual.preco, currency_id: 'BRL' });
-    }
     const res = await fetch('/api/mp/preferencia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -541,42 +535,42 @@ async function gerarMP() {
   }
 }
 
-function gerarSemMP() { mpLinkGerado = ''; finalizarLink(); }
-
 async function finalizarLink() {
   const cfg = await getApiCfg();
   const base = cfg.base_url || window.location.origin;
 
-  const catalogoMin = prodsCache.map(p => ({ id: p.id, nome: p.nome, cor: p.cor, preco: parseFloat(p.preco), qtd: p.qtd }));
-
   const order = {
-    v: 1,
+    v: 2,
     cliente: document.getElementById('cli-nome').value.trim(),
     items: pedItems.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd })),
-    frete: freteAtual,
+    frete: null,
     mp_link: mpLinkGerado,
-    wpp_admin: cfg.wpp_admin,
-    catalogo: catalogoMin
+    wpp_admin: cfg.wpp_admin
   };
 
-  const link = base + '/index.html#pedido=' + encodeData(order);
+  const link = base + '/index.html#pedido=' + btoa(unescape(encodeURIComponent(JSON.stringify(order))));
   document.getElementById('link-txt').textContent = link;
   document.getElementById('link-box').style.display = 'block';
-  document.getElementById('btn-sem-mp').style.display = 'none';
 }
 
-function enviarWpp() {
+async function enviarWpp() {
   const wppCli = document.getElementById('cli-whats').value.replace(/\D/g, '');
   if (!wppCli) { toast('Informe o WhatsApp do cliente', '#e74c3c'); return; }
-  const nome  = document.getElementById('cli-nome').value.trim() || '';
-  const link  = document.getElementById('link-txt').textContent;
-  const sub   = pedItems.reduce((s, i) => s + i.preco * i.qtd, 0);
-  const total = sub + (freteAtual ? freteAtual.preco : 0);
+  if (!pedItems.length) { toast('Adicione produtos ao pedido', '#e74c3c'); return; }
+
+  // Gera o link do cliente automaticamente (sem precisar clicar no MP antes)
+  await finalizarLink();
+
+  const nome = document.getElementById('cli-nome').value.trim() || '';
+  const sub  = pedItems.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const link = document.getElementById('link-txt').textContent;
 
   let msg = `Olá${nome ? ' ' + nome : ''}! 👋\n\nAqui está seu pedido da *Hearts Couro* 🤎\n\n📦 *Itens:*\n`;
   pedItems.forEach(i => { msg += `• ${i.qtd}x ${i.nome}${i.cor ? ' (' + i.cor + ')' : ''} — ${brl(i.preco * i.qtd)}\n`; });
-  if (freteAtual) msg += `\n🚚 *Frete:* ${freteAtual.servico} — ${brl(freteAtual.preco)}${freteAtual.prazo ? ' (' + freteAtual.prazo + ')' : ''}\n`;
-  msg += `\n💰 *Total: ${brl(total)}*\n\n👇 Acesse para revisar e pagar:\n${link}\n\nQualquer dúvida é só falar! 😊`;
+  msg += `\n💰 *Subtotal: ${brl(sub)}*`;
+  msg += `\n🚚 *Frete:* PAC, SEDEX ou retirada na loja`;
+  msg += `\n\n👇 Acesse para escolher o frete e pagar:\n${link}`;
+  msg += `\n\nQualquer dúvida é só falar! 😊`;
 
   window.open(`https://wa.me/55${wppCli}?text=${encodeURIComponent(msg)}`, '_blank');
 }
