@@ -181,7 +181,7 @@ function renderItems() {
 
   el.innerHTML = items.map((item, i) => `
     <div class="oi">
-      <div class="oi-emoji">&#128156;</div>
+      ${item.foto ? `<img src="${item.foto}" alt="${item.nome}" style="width:46px;height:46px;object-fit:cover;border-radius:8px;flex-shrink:0"/>` : `<div class="oi-emoji">&#128156;</div>`}
       <div class="oi-info">
         <strong>${item.nome}</strong>
         ${item.cor ? `<div class="oi-sub">${item.cor}</div>` : ''}

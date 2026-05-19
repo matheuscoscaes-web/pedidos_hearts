@@ -466,7 +466,7 @@ function addItemComCor(idx, cor) {
   const p = prodsCache[idx];
   const ex = pedItems.find(i => i.id === p.id && i.cor === cor);
   if (ex) ex.qtd++;
-  else pedItems.push({ id: p.id, nome: p.nome, cor: cor, preco: parseFloat(p.preco), qtd: 1 });
+  else pedItems.push({ id: p.id, nome: p.nome, cor: cor, preco: parseFloat(p.preco), qtd: 1, foto: p.foto || '' });
   renderItems(); updateResumo();
 }
 
@@ -542,7 +542,7 @@ async function finalizarLink() {
   const order = {
     v: 2,
     cliente: document.getElementById('cli-nome').value.trim(),
-    items: pedItems.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd })),
+    items: pedItems.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd, foto: i.foto || '' })),
     frete: null,
     mp_link: mpLinkGerado,
     wpp_admin: cfg.wpp_admin
