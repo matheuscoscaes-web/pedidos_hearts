@@ -620,7 +620,7 @@ async function finalizarLink() {
   const order = {
     v: 2,
     cliente: document.getElementById('cli-nome').value.trim(),
-    items: pedItems.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd })),
+    items: pedItems.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd, prazo_entrega: i.prazo_entrega || '' })),
     frete: null,
     mp_link: mpLinkGerado,
     wpp_admin: cfg.wpp_admin
