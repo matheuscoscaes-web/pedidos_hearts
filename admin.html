@@ -224,6 +224,7 @@
       <div class="form-group"><label>Qtd estoque (sem cores)</label><input type="number" id="p-qtd" placeholder="0" min="0"/></div>
       <div class="form-group"><label>Preço (R$)</label><input type="number" id="p-preco" placeholder="0,00" min="0" step=".01"/></div>
       <div class="form-group"><label>Descrição</label><textarea id="p-desc" placeholder="Materiais, tamanho, detalhes..."></textarea></div>
+      <div class="form-group"><label>Prazo de entrega (opcional)</label><input type="text" id="p-prazo" placeholder="Ex: 10 a 12 dias úteis"/></div>
       <div style="font-size:.75rem;font-weight:700;color:#6b3a2a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Dimensões da embalagem (para frete)</div>
       <div class="row2">
         <div class="form-group"><label>Altura (cm)</label><input type="number" id="p-altura" placeholder="0" min="0" step=".1"/></div>
@@ -391,16 +392,17 @@ async function salvarProd() {
         qtd: parseInt(document.getElementById('p-qtd').value) || 0,
         preco, descricao: document.getElementById('p-desc').value.trim(),
         foto: fotoB64,
-        altura:      parseFloat(document.getElementById('p-altura').value)  || 0,
-        largura:     parseFloat(document.getElementById('p-largura').value) || 0,
-        comprimento: parseFloat(document.getElementById('p-comp').value)    || 0,
-        peso:        parseFloat(document.getElementById('p-peso').value)    || 0
+        altura:        parseFloat(document.getElementById('p-altura').value)  || 0,
+        largura:       parseFloat(document.getElementById('p-largura').value) || 0,
+        comprimento:   parseFloat(document.getElementById('p-comp').value)    || 0,
+        peso:          parseFloat(document.getElementById('p-peso').value)    || 0,
+        prazo_entrega: document.getElementById('p-prazo').value.trim()
       })
     });
     const data = await res.json();
     if (data.erro) throw new Error(data.erro);
 
-    ['p-nome','p-qtd','p-preco','p-desc','p-altura','p-largura','p-comp','p-peso'].forEach(id => document.getElementById(id).value = '');
+    ['p-nome','p-qtd','p-preco','p-desc','p-prazo','p-altura','p-largura','p-comp','p-peso'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('inp-foto').value = '';
     document.getElementById('preview-img').style.display = 'none';
     fotoB64 = '';
@@ -542,7 +544,7 @@ function addItemComCor(idx, cor) {
   const p = prodsCache[idx];
   const ex = pedItems.find(i => i.id === p.id && i.cor === corNome);
   if (ex) ex.qtd++;
-  else pedItems.push({ id: p.id, nome: p.nome, cor: corNome, preco: parseFloat(p.preco), qtd: 1, foto: p.foto || '' });
+  else pedItems.push({ id: p.id, nome: p.nome, cor: corNome, preco: parseFloat(p.preco), qtd: 1, foto: p.foto || '', prazo_entrega: p.prazo_entrega || '' });
   renderItems(); updateResumo();
 }
 

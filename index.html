@@ -241,6 +241,12 @@ function removerItem(i) {
   updateResumo();
 }
 
+// ── prazo customizado (produto sob encomenda) ──────────────
+function getPrazoCustom() {
+  const item = items.find(i => i.prazo_entrega);
+  return item ? item.prazo_entrega : null;
+}
+
 // ── frete ──────────────────────────────────────────────────
 function renderFrete() {
   const el = document.getElementById('frete-inner');
@@ -260,11 +266,13 @@ function renderFrete() {
     return;
   }
 
+  const prazoCustom = getPrazoCustom();
   el.innerHTML = `
     <div id="frete-sel-area">
+      ${prazoCustom ? `<div class="warn" style="margin-bottom:12px">&#9200; Este produto é <strong>sob encomenda</strong>. Prazo de entrega: <strong>${prazoCustom}</strong> — independente da forma escolhida abaixo.</div>` : ''}
       <button class="btn-frete-op" onclick="escolherRetirada()">
         <span class="bfo-icon">&#127978;</span>
-        <div><strong>Retirar na loja</strong><small>Gr&aacute;tis &middot; Combinar hor&aacute;rio</small></div>
+        <div><strong>Retirar na loja</strong><small>Gr&aacute;tis &middot; ${prazoCustom ? 'Disponível em ' + prazoCustom : 'Combinar horário'}</small></div>
       </button>
       <button class="btn-frete-op" id="btn-op-correios" onclick="mostrarCep()">
         <span class="bfo-icon">&#128666;</span>
@@ -282,7 +290,8 @@ function renderFrete() {
 }
 
 function escolherRetirada() {
-  frete = { servico: 'Retirada na loja', empresa: '', preco: 0, prazo: 'Combinar horário' };
+  const prazoCustom = getPrazoCustom();
+  frete = { servico: 'Retirada na loja', empresa: '', preco: 0, prazo: prazoCustom ? 'Disponível em ' + prazoCustom : 'Combinar horário' };
   renderFrete();
   updateResumo();
 }
@@ -339,11 +348,12 @@ function renderOpcoesCorreios(ops) {
   window._freteOps = ops;
   const el = document.getElementById('frete-resultados');
   if (!el) return;
+  const prazoCustom = getPrazoCustom();
   el.innerHTML = ops.map((o, i) => `
     <div class="frete-op" onclick="selecionarCorreios(${i})">
       <div>
         <div class="fo-nome">${o.name}</div>
-        <div class="fo-prazo">${o.delivery_time} dias &uacute;teis</div>
+        <div class="fo-prazo">${prazoCustom || (o.delivery_time + ' dias úteis')}</div>
       </div>
       <div class="fo-preco">${brl(o.price)}</div>
     </div>`).join('');
@@ -351,11 +361,12 @@ function renderOpcoesCorreios(ops) {
 
 function selecionarCorreios(i) {
   const o = window._freteOps[i];
+  const prazoCustom = getPrazoCustom();
   frete = {
     servico:      o.name,
     empresa:      o.company?.name || 'Correios',
     preco:        parseFloat(o.price),
-    prazo:        o.delivery_time + ' dias úteis',
+    prazo:        prazoCustom || (o.delivery_time + ' dias úteis'),
     me_service_id: o.id
   };
   enderecoCliente = null;
@@ -772,14 +783,16 @@ function resolverFreteRJ(bairro, localidade) {
     prazo = found.obs ? 'Toda ' + found.obs : (diaMap[dia] || found.rota);
   }
 
-  window._freteRJ = { servico: 'Entrega em ' + nomeExib, empresa: '', preco, prazo };
+  const prazoCustom = getPrazoCustom();
+  const prazoExib = prazoCustom || prazo;
+  window._freteRJ = { servico: 'Entrega em ' + nomeExib, empresa: '', preco, prazo: prazoExib };
   const el = document.getElementById('frete-resultados');
   if (!el) return;
   el.innerHTML = `
     <div class="frete-op" onclick="selecionarFreteRJ()">
       <div>
         <div class="fo-nome">Entrega em ${nomeExib}</div>
-        ${prazo ? `<div class="fo-prazo">${prazo}</div>` : ''}
+        ${prazoExib ? `<div class="fo-prazo">${prazoExib}</div>` : ''}
       </div>
       <div class="fo-preco">${brl(preco)}</div>
     </div>`;
