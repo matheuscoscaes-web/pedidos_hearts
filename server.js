@@ -345,6 +345,44 @@ app.post('/api/mp/preferencia', async (req, res) => {
   }
 });
 
+app.post('/api/pedidos/:id/cancelar-etiqueta', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM pedidos WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' });
+
+    const pedido = rows[0];
+    if (!pedido.me_order_id) return res.status(400).json({ erro: 'Este pedido não tem etiqueta gerada.' });
+
+    const token = process.env.ME_TOKEN;
+    const headers = {
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+      'Authorization': 'Bearer ' + token,
+      'User-Agent':    'Hearts Couro (contato@heartscouro.com.br)'
+    };
+
+    const r = await fetch(`https://melhorenvio.com.br/api/v2/me/cart/${pedido.me_order_id}`, {
+      method: 'DELETE',
+      headers
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      return res.status(400).json({ erro: 'Melhor Envios recusou o cancelamento.', detalhe: err });
+    }
+
+    await pool.query(
+      `UPDATE pedidos SET status = 'pago', me_order_id = NULL, etiqueta_url = NULL WHERE id = $1`,
+      [req.params.id]
+    );
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: 'Erro ao cancelar etiqueta: ' + e.message });
+  }
+});
+
 // ── webhook Mercado Pago ──────────────────────────────────
 app.post('/api/webhooks/mp', async (req, res) => {
   res.sendStatus(200); // responde imediatamente para o MP não reenviar

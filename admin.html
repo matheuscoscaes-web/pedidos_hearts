@@ -103,6 +103,9 @@
     .btn-etiqueta:hover{opacity:.85}
     .btn-etiqueta:disabled{opacity:.4;cursor:default}
     .btn-imprimir{background:#fff;color:#6b3a2a;border:1.5px solid #ddc9b9;border-radius:8px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px}
+    .btn-cancelar-et{background:#fff;color:#c0392b;border:1.5px solid #f5c6c6;border-radius:8px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;transition:all .2s}
+    .btn-cancelar-et:hover{background:#fde8e4;border-color:#c0392b}
+    .btn-cancelar-et:disabled{opacity:.4;cursor:default}
     /* modal cor */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center}
     .modal-sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:80vh;overflow-y:auto}
@@ -657,6 +660,9 @@ function renderPedidos(pedidos) {
     if (p.etiqueta_url) {
       acaoHtml += `<br/><a class="btn-imprimir" href="${p.etiqueta_url}" target="_blank">&#128424;&#65039; Imprimir etiqueta</a>`;
     }
+    if (gerada) {
+      acaoHtml += ` <button class="btn-cancelar-et" onclick="cancelarEtiqueta(${p.id}, this)">&#10006; Cancelar etiqueta</button>`;
+    }
 
     return `
       <div class="ped-item">
@@ -671,6 +677,23 @@ function renderPedidos(pedidos) {
         ${acaoHtml}
       </div>`;
   }).join('');
+}
+
+async function cancelarEtiqueta(id, btn) {
+  if (!confirm('Cancelar a etiqueta? O valor será estornado pro seu saldo no Melhor Envios.')) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>';
+  try {
+    const res  = await fetch(`/api/pedidos/${id}/cancelar-etiqueta`, { method: 'POST' });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+    toast('Etiqueta cancelada. Saldo estornado no ME.');
+    await loadPedidos();
+  } catch(e) {
+    toast('Erro: ' + e.message, '#e74c3c');
+    btn.disabled = false;
+    btn.innerHTML = '&#10006; Cancelar etiqueta';
+  }
 }
 
 async function gerarEtiqueta(id, btn) {
