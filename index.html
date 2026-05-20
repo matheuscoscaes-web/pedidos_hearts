@@ -69,6 +69,20 @@
     .lb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;animation:lbIn .18s ease}
     @keyframes lbIn{from{opacity:0}to{opacity:1}}
     .lb-overlay img{max-width:100%;max-height:88vh;border-radius:14px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+    /* formulário endereço */
+    .addr-card h3{font-size:.95rem;color:#6b3a2a;font-weight:700;margin-bottom:14px}
+    .addr-card .fg{margin-bottom:12px}
+    .addr-card label{display:block;font-size:.73rem;font-weight:700;color:#6b3a2a;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+    .addr-card input{width:100%;border:1.5px solid #e0d4c8;border-radius:10px;padding:10px 12px;font-size:.9rem;color:#333;outline:none;font-family:inherit;background:#fff;transition:border-color .2s}
+    .addr-card input:focus{border-color:#6b3a2a}
+    .addr-card .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .addr-card .row3{display:grid;grid-template-columns:1fr 72px;gap:8px}
+    .btn-conf-end{width:100%;padding:13px;background:#6b3a2a;color:#fff;border:none;border-radius:12px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;transition:opacity .2s}
+    .btn-conf-end:hover{opacity:.88}
+    .end-ok{background:#f0faf4;border:1.5px solid #a8d5b5;border-radius:12px;padding:14px}
+    .end-ok .eo-title{font-size:.78rem;font-weight:700;color:#2e7d32;margin-bottom:4px}
+    .end-ok .eo-addr{font-size:.84rem;color:#1b5e20;line-height:1.6}
+    .end-ok button{background:none;border:none;color:#9e7060;font-size:.78rem;cursor:pointer;text-decoration:underline;margin-top:6px;padding:0;font-family:inherit}
     /* entrega local rj */
     .rota-header{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#9e7060;padding:10px 2px 4px;border-bottom:1px solid #f0e8e0;margin-bottom:6px;margin-top:4px}
     .bairro-op{width:100%;padding:10px 12px;border:1.5px solid #e0d4c8;border-radius:8px;background:#fff;font-size:.87rem;font-weight:500;color:#333;cursor:pointer;text-align:left;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-family:inherit;transition:all .2s}
@@ -117,6 +131,9 @@ let items    = [];
 let frete    = null;
 let wppAdmin = '';
 let modified = false;
+let _cepData         = null;  // resposta do ViaCEP
+let enderecoCliente  = null;  // endereço confirmado pelo cliente
+let _pedidoSalvoId   = null;  // evita duplicar ao tentar pagar novamente
 
 // ── parse URL ──────────────────────────────────────────────
 function parseUrl() {
@@ -289,6 +306,7 @@ async function calcularFrete() {
     const vcRes = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
     const vcData = await vcRes.json();
     if (vcData.erro) throw new Error('CEP não encontrado.');
+    _cepData = vcData;
 
     if (vcData.uf === 'RJ') {
       resolverFreteRJ(vcData.bairro || '', vcData.localidade || '');
@@ -334,17 +352,25 @@ function renderOpcoesCorreios(ops) {
 function selecionarCorreios(i) {
   const o = window._freteOps[i];
   frete = {
-    servico: o.name,
-    empresa: o.company?.name || 'Correios',
-    preco: parseFloat(o.price),
-    prazo: o.delivery_time + ' dias úteis'
+    servico:      o.name,
+    empresa:      o.company?.name || 'Correios',
+    preco:        parseFloat(o.price),
+    prazo:        o.delivery_time + ' dias úteis',
+    me_service_id: o.id
   };
+  enderecoCliente = null;
+  _pedidoSalvoId  = null;
   renderFrete();
   updateResumo();
+  mostrarFormEndereco();
 }
 
 function trocarFrete() {
   frete = null;
+  enderecoCliente = null;
+  _pedidoSalvoId  = null;
+  const formEl = document.getElementById('card-endereco');
+  if (formEl) formEl.remove();
   renderFrete();
   updateResumo();
 }
@@ -399,6 +425,12 @@ function renderPagArea(total) {
     return;
   }
 
+  // Correios precisa de endereço preenchido
+  if (frete.me_service_id && !enderecoCliente) {
+    el.innerHTML = `<div class="warn" style="text-align:center;margin-bottom:0">&#9757;&#65039; Preencha o endereço de entrega acima para continuar.</div>`;
+    return;
+  }
+
   el.innerHTML = `
     <button class="btn btn-mp" id="btn-pagar" onclick="pagar()">
       <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
@@ -408,17 +440,60 @@ function renderPagArea(total) {
 
 async function pagar() {
   if (!items.length || !frete) return;
+  if (frete.me_service_id && !enderecoCliente) { toast('Preencha o endereço de entrega', '#e74c3c'); return; }
 
   const btn = document.getElementById('btn-pagar');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Aguarde...';
 
+  const MP_BTN_HTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
+
   try {
+    // Salva pedido no banco (só uma vez por sessão)
+    if (!_pedidoSalvoId) {
+      const sub   = items.reduce((s, i) => s + i.preco * i.qtd, 0);
+      const total = sub + (frete.preco || 0);
+      const tipo  = frete.me_service_id ? 'correios'
+                  : frete.servico === 'Retirada na loja' ? 'retirada' : 'local_rj';
+
+      try {
+        const sv = await fetch('/api/pedidos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cliente_nome:  enderecoCliente?.nome || ORDER?.cliente || '',
+            cliente_cpf:   enderecoCliente?.cpf  || '',
+            cliente_whats: '',
+            cep:           enderecoCliente?.cep        || '',
+            logradouro:    enderecoCliente?.rua        || '',
+            numero:        enderecoCliente?.numero     || '',
+            complemento:   enderecoCliente?.complemento || '',
+            bairro:        enderecoCliente?.bairro     || '',
+            cidade:        enderecoCliente?.cidade     || '',
+            uf:            enderecoCliente?.uf         || '',
+            frete_tipo:    tipo,
+            frete_servico: frete.servico,
+            frete_empresa: frete.empresa || '',
+            frete_preco:   frete.preco,
+            frete_prazo:   frete.prazo  || '',
+            me_service_id: frete.me_service_id || null,
+            items:         items.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd })),
+            subtotal: sub,
+            total
+          })
+        });
+        const sd = await sv.json();
+        if (sd.id) _pedidoSalvoId = sd.id;
+      } catch(saveErr) {
+        console.warn('Pedido não pôde ser salvo:', saveErr);
+      }
+    }
+
     // Usa link pré-gerado apenas se o frete já veio do admin (formato antigo)
     if (!modified && ORDER.mp_link && ORDER.frete) {
       window.open(ORDER.mp_link, '_blank');
       btn.disabled = false;
-      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
+      btn.innerHTML = MP_BTN_HTML;
       return;
     }
 
@@ -437,7 +512,7 @@ async function pagar() {
     const res = await fetch('/api/mp/preferencia', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: mpItems, nome_cliente: ORDER.cliente || 'Cliente' })
+      body: JSON.stringify({ items: mpItems, nome_cliente: enderecoCliente?.nome || ORDER?.cliente || 'Cliente', pedido_id: _pedidoSalvoId })
     });
 
     const data = await res.json();
@@ -454,7 +529,7 @@ async function pagar() {
   } finally {
     if (document.getElementById('btn-pagar')) {
       btn.disabled = false;
-      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="24" fill="#fff" fill-opacity=".25"/><path d="M12 26c4-8 20-8 24 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg> Pagar com Mercado Pago';
+      btn.innerHTML = MP_BTN_HTML;
     }
   }
 }
@@ -476,6 +551,109 @@ function confirmarWpp() {
   }
 
   window.open(`https://wa.me/55${wppAdmin}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── formulário de endereço (Correios) ─────────────────────
+function maskCpf(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 11);
+  if      (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+  else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+  else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
+  el.value = v;
+}
+
+function mostrarFormEndereco() {
+  let formEl = document.getElementById('card-endereco');
+  if (!formEl) {
+    formEl = document.createElement('div');
+    formEl.id        = 'card-endereco';
+    formEl.className = 'card addr-card';
+    const freteCard = [...document.querySelectorAll('#page-content .card')]
+      .find(c => c.querySelector('h3')?.textContent === 'Entrega');
+    if (freteCard) freteCard.insertAdjacentElement('afterend', formEl);
+    else document.getElementById('page-content').appendChild(formEl);
+  }
+
+  const d = _cepData || {};
+  const cepFmt = (d.cep || '').replace(/^(\d{5})-?(\d{3})$/, '$1-$2');
+
+  formEl.innerHTML = `
+    <h3>&#128205; Endereço de entrega</h3>
+    <div class="fg">
+      <label>Nome completo do destinatário</label>
+      <input type="text" id="end-nome" value="${ORDER?.cliente || ''}" placeholder="Nome completo"/>
+    </div>
+    <div class="fg">
+      <label>CPF</label>
+      <input type="text" id="end-cpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpf(this)" inputmode="numeric"/>
+    </div>
+    <div class="fg">
+      <label>Rua / Avenida</label>
+      <input type="text" id="end-rua" value="${d.logradouro || ''}" placeholder="Rua ..."/>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Número</label><input type="text" id="end-num" placeholder="123" inputmode="numeric"/></div>
+      <div class="fg"><label>Complemento</label><input type="text" id="end-comp" placeholder="Apto, Bloco..."/></div>
+    </div>
+    <div class="fg">
+      <label>Bairro</label>
+      <input type="text" id="end-bairro" value="${d.bairro || ''}" placeholder="Bairro"/>
+    </div>
+    <div class="row3">
+      <div class="fg"><label>Cidade</label><input type="text" id="end-cidade" value="${d.localidade || ''}" placeholder="Cidade"/></div>
+      <div class="fg"><label>UF</label><input type="text" id="end-uf" value="${d.uf || ''}" placeholder="SP" maxlength="2" style="text-transform:uppercase"/></div>
+    </div>
+    <div class="fg" style="background:#f5f0eb;border-radius:8px;padding:8px 12px;font-size:.82rem;color:#6b3a2a">
+      CEP: <strong>${cepFmt || document.getElementById('cep-input')?.value || ''}</strong>
+    </div>
+    <button class="btn-conf-end" onclick="confirmarEndereco()">Confirmar endereço &#10003;</button>
+  `;
+  formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function confirmarEndereco() {
+  const nome   = document.getElementById('end-nome')?.value.trim();
+  const cpf    = document.getElementById('end-cpf')?.value.trim();
+  const rua    = document.getElementById('end-rua')?.value.trim();
+  const num    = document.getElementById('end-num')?.value.trim();
+  const comp   = document.getElementById('end-comp')?.value.trim();
+  const bairro = document.getElementById('end-bairro')?.value.trim();
+  const cidade = document.getElementById('end-cidade')?.value.trim();
+  const uf     = document.getElementById('end-uf')?.value.trim().toUpperCase();
+
+  if (!nome)  { toast('Informe o nome do destinatário', '#e74c3c'); return; }
+  if (!cpf || cpf.replace(/\D/g,'').length !== 11) { toast('CPF inválido — informe os 11 dígitos', '#e74c3c'); return; }
+  if (!rua)   { toast('Informe a rua/avenida', '#e74c3c'); return; }
+  if (!num)   { toast('Informe o número do endereço', '#e74c3c'); return; }
+  if (!bairro){ toast('Informe o bairro', '#e74c3c'); return; }
+  if (!cidade){ toast('Informe a cidade', '#e74c3c'); return; }
+  if (!uf)    { toast('Informe o estado (UF)', '#e74c3c'); return; }
+
+  const cepRaw = (_cepData?.cep || document.getElementById('cep-input')?.value || '').replace(/\D/g,'');
+  enderecoCliente = { nome, cpf, rua, numero: num, complemento: comp, bairro, cidade, uf, cep: cepRaw };
+
+  const formEl = document.getElementById('card-endereco');
+  if (formEl) {
+    formEl.innerHTML = `
+      <div class="end-ok">
+        <div class="eo-title">&#10003; Endereço confirmado</div>
+        <div class="eo-addr">
+          ${rua}, ${num}${comp ? ' — '+comp : ''}<br/>
+          ${bairro} · ${cidade}/${uf}<br/>
+          CEP: ${cepRaw.replace(/^(\d{5})(\d{3})$/, '$1-$2')}
+        </div>
+        <button onclick="editarEndereco()">Editar endereço</button>
+      </div>
+    `;
+  }
+  updateResumo();
+}
+
+function editarEndereco() {
+  enderecoCliente = null;
+  _pedidoSalvoId  = null;
+  mostrarFormEndereco();
+  updateResumo();
 }
 
 // ── entrega local rj ───────────────────────────────────────

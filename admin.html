@@ -87,6 +87,22 @@
     .cores-add{display:flex;gap:6px;align-items:center}
     .cores-add input{border:none;outline:none;font-size:.88rem;flex:1;background:transparent;font-family:inherit;color:#333;padding:2px 0}
     .cores-add button{background:#6b3a2a;color:#fff;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+    /* pedidos */
+    .ped-item{background:#fdf6f0;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #f0e0d0}
+    .ped-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .ped-data{font-size:.74rem;color:#9e7060}
+    .badge{border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700}
+    .badge-ok{background:#e8f5e9;color:#2e7d32}
+    .badge-pago{background:#e3f2fd;color:#1565c0}
+    .badge-wait{background:#fff8e1;color:#7b6000}
+    .ped-cliente{font-size:.9rem;font-weight:700;color:#333;margin-bottom:3px}
+    .ped-itens{font-size:.78rem;color:#9e7060;margin-bottom:5px}
+    .ped-valor{font-size:.84rem;font-weight:700;color:#6b3a2a;margin-bottom:8px}
+    .ped-addr{font-size:.75rem;color:#888;margin-top:6px;line-height:1.5}
+    .btn-etiqueta{background:#6b3a2a;color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s}
+    .btn-etiqueta:hover{opacity:.85}
+    .btn-etiqueta:disabled{opacity:.4;cursor:default}
+    .btn-imprimir{background:#fff;color:#6b3a2a;border:1.5px solid #ddc9b9;border-radius:8px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:6px}
     /* modal cor */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center}
     .modal-sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:80vh;overflow-y:auto}
@@ -106,6 +122,7 @@
 
 <div class="tab-nav">
   <button class="tab-btn ativo" onclick="showTab('pedido',this)">&#128230; Novo Pedido</button>
+  <button class="tab-btn" onclick="showTab('pedidos',this)">&#128203; Pedidos</button>
   <button class="tab-btn" onclick="showTab('produtos',this)">&#127991;&#65039; Produtos</button>
 </div>
 
@@ -154,6 +171,14 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ===== PEDIDOS ===== -->
+  <div id="tab-pedidos" class="tab-panel">
+    <div class="card">
+      <div class="card-title">Pedidos recebidos</div>
+      <div id="lista-pedidos"><div class="empty">Carregando...</div></div>
+    </div>
   </div>
 
   <!-- ===== PRODUTOS ===== -->
@@ -230,6 +255,7 @@ function showTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('ativo'));
   document.getElementById('tab-' + id).classList.add('ativo');
   if (btn) btn.classList.add('ativo');
+  if (id === 'pedidos') loadPedidos();
 }
 
 // ── api config ─────────────────────────────────────────────
@@ -580,6 +606,88 @@ function copiarLink() {
   navigator.clipboard.writeText(link)
     .then(() => toast('Link copiado!'))
     .catch(() => toast('Selecione e copie manualmente', '#f39c12'));
+}
+
+// ── pedidos ────────────────────────────────────────────────
+async function loadPedidos() {
+  const el = document.getElementById('lista-pedidos');
+  if (!el) return;
+  el.innerHTML = '<div class="empty">Carregando...</div>';
+  try {
+    const r = await fetch('/api/pedidos');
+    const pedidos = await r.json();
+    if (pedidos.erro) throw new Error(pedidos.erro);
+    renderPedidos(pedidos);
+  } catch(e) {
+    el.innerHTML = '<div class="empty">Erro ao carregar pedidos: ' + e.message + '</div>';
+  }
+}
+
+function renderPedidos(pedidos) {
+  const el = document.getElementById('lista-pedidos');
+  if (!pedidos.length) { el.innerHTML = '<div class="empty">Nenhum pedido recebido ainda.</div>'; return; }
+
+  el.innerHTML = pedidos.map(p => {
+    const items   = Array.isArray(p.items) ? p.items : [];
+    const itensStr = items.map(i => `${i.qtd}x ${i.nome}${i.cor ? ' ('+i.cor+')' : ''}`).join(', ') || '—';
+    const data    = new Date(p.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const gerada   = p.status === 'etiqueta_gerada';
+    const pago     = p.status === 'pago' || gerada;
+    const correios = p.frete_tipo === 'correios';
+    const badgeHtml = gerada
+      ? '<span class="badge badge-ok">&#10003; Etiqueta gerada</span>'
+      : pago
+        ? '<span class="badge badge-pago">&#128179; Pago</span>'
+        : '<span class="badge badge-wait">Aguardando pagamento</span>';
+
+    let addrHtml = '';
+    if (correios && p.logradouro) {
+      addrHtml = `<div class="ped-addr">
+        &#128205; ${p.logradouro}, ${p.numero}${p.complemento ? ' — '+p.complemento : ''}<br/>
+        ${p.bairro} · ${p.cidade}/${p.uf} · CEP ${p.cep}
+      </div>`;
+    }
+
+    let acaoHtml = '';
+    if (correios && pago && !gerada) {
+      acaoHtml = `<button class="btn-etiqueta" onclick="gerarEtiqueta(${p.id}, this)">&#128230; Gerar Etiqueta ME</button>`;
+    } else if (correios && !pago) {
+      acaoHtml = `<span style="font-size:.76rem;color:#9e7060">&#9203; Aguardando pagamento para gerar etiqueta</span>`;
+    }
+    if (p.etiqueta_url) {
+      acaoHtml += `<br/><a class="btn-imprimir" href="${p.etiqueta_url}" target="_blank">&#128424;&#65039; Imprimir etiqueta</a>`;
+    }
+
+    return `
+      <div class="ped-item">
+        <div class="ped-header">
+          <span class="ped-data">${data}</span>
+          ${badgeHtml}
+        </div>
+        <div class="ped-cliente">${p.cliente_nome || 'Cliente'}</div>
+        <div class="ped-itens">${itensStr}</div>
+        <div class="ped-valor">${brl(p.total)} &middot; ${p.frete_servico || p.frete_tipo || '—'}</div>
+        ${addrHtml}
+        ${acaoHtml}
+      </div>`;
+  }).join('');
+}
+
+async function gerarEtiqueta(id, btn) {
+  if (!confirm('Isso irá debitar o valor do frete do seu saldo no Melhor Envios e gerar a etiqueta. Confirmar?')) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Gerando...';
+  try {
+    const res  = await fetch(`/api/pedidos/${id}/etiqueta`, { method: 'POST' });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+    toast('Etiqueta gerada com sucesso!');
+    await loadPedidos();
+  } catch(e) {
+    toast('Erro: ' + e.message, '#e74c3c');
+    btn.disabled = false;
+    btn.textContent = '&#128230; Gerar Etiqueta ME';
+  }
 }
 
 // ── init ───────────────────────────────────────────────────
