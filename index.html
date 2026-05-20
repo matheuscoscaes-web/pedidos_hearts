@@ -316,7 +316,7 @@ async function calcularFrete() {
     const res = await fetch('/api/frete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cep_destino: cep })
+      body: JSON.stringify({ cep_destino: cep, items: items.map(i => ({ id: i.id, qtd: i.qtd })) })
     });
     const data = await res.json();
     if (data.erro) throw new Error(data.erro);

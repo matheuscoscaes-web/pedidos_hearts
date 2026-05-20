@@ -85,7 +85,9 @@
     .core-chip{background:#ede0d4;color:#6b3a2a;border-radius:20px;padding:4px 10px 4px 12px;font-size:.78rem;display:flex;align-items:center;gap:4px;font-weight:600}
     .core-chip button{background:none;border:none;color:#9e7060;cursor:pointer;font-size:.9rem;padding:0;line-height:1;display:flex;align-items:center}
     .cores-add{display:flex;gap:6px;align-items:center}
-    .cores-add input{border:none;outline:none;font-size:.88rem;flex:1;background:transparent;font-family:inherit;color:#333;padding:2px 0}
+    .cores-add input[type=text]{border:none;outline:none;font-size:.88rem;flex:2;background:transparent;font-family:inherit;color:#333;padding:2px 0;min-width:0}
+    .cores-add input[type=number]{border:1.5px solid #e0d4c8;outline:none;font-size:.85rem;width:62px;flex:none;background:#f9f5f2;font-family:inherit;color:#333;padding:3px 6px;border-radius:6px;text-align:center}
+    .cores-add input[type=number]:focus{border-color:#6b3a2a}
     .cores-add button{background:#6b3a2a;color:#fff;border:none;border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:1.1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center}
     /* pedidos */
     .ped-item{background:#fdf6f0;border-radius:12px;padding:14px;margin-bottom:12px;border:1.5px solid #f0e0d0}
@@ -111,8 +113,10 @@
     .modal-sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:80vh;overflow-y:auto}
     .modal-sheet h3{font-size:1rem;color:#6b3a2a;margin-bottom:4px;font-weight:700}
     .modal-sheet p{font-size:.78rem;color:#9e7060;margin-bottom:14px}
-    .cor-btn{width:100%;padding:13px 16px;border:1.5px solid #e0d4c8;border-radius:12px;background:#fff;font-size:.9rem;font-weight:600;color:#333;cursor:pointer;text-align:left;margin-bottom:8px;font-family:inherit;transition:all .2s}
-    .cor-btn:hover{border-color:#6b3a2a;background:#fdf6f0}
+    .cor-btn{width:100%;padding:13px 16px;border:1.5px solid #e0d4c8;border-radius:12px;background:#fff;font-size:.9rem;font-weight:600;color:#333;cursor:pointer;text-align:left;margin-bottom:8px;font-family:inherit;transition:all .2s;display:flex;justify-content:space-between;align-items:center}
+    .cor-btn:hover:not(:disabled){border-color:#6b3a2a;background:#fdf6f0}
+    .cor-btn:disabled{opacity:.45;cursor:not-allowed;background:#f5f0eb}
+    .cor-badge{font-size:.74rem;font-weight:400;opacity:.7}
     .btn-cancelar-modal{width:100%;padding:12px;border:none;border-radius:12px;background:#f5f0eb;color:#6b3a2a;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit}
   </style>
 </head>
@@ -207,18 +211,28 @@
 
       <div class="form-group"><label>Nome</label><input type="text" id="p-nome" placeholder="Ex: Bolsa de couro"/></div>
       <div class="form-group">
-        <label>Cores disponíveis</label>
-        <div class="cores-wrap" onclick="document.getElementById('inp-cor-nova').focus()">
+        <label>Cores e estoque por cor</label>
+        <div class="cores-wrap">
           <div class="cores-chips" id="cores-chips"></div>
           <div class="cores-add">
-            <input type="text" id="inp-cor-nova" placeholder="Ex: Marrom — pressione Enter para adicionar" onkeydown="corKeydown(event)"/>
+            <input type="text" id="inp-cor-nova" placeholder="Nome da cor (ex: Marrom)" onkeydown="corKeydown(event)"/>
+            <input type="number" id="inp-cor-qtd" placeholder="Qtd" min="0" title="Estoque desta cor" onkeydown="corQtdKeydown(event)"/>
             <button type="button" onclick="addCor()" title="Adicionar cor">+</button>
           </div>
         </div>
       </div>
-      <div class="form-group"><label>Qtd estoque</label><input type="number" id="p-qtd" placeholder="0" min="0"/></div>
+      <div class="form-group"><label>Qtd estoque (sem cores)</label><input type="number" id="p-qtd" placeholder="0" min="0"/></div>
       <div class="form-group"><label>Preço (R$)</label><input type="number" id="p-preco" placeholder="0,00" min="0" step=".01"/></div>
       <div class="form-group"><label>Descrição</label><textarea id="p-desc" placeholder="Materiais, tamanho, detalhes..."></textarea></div>
+      <div style="font-size:.75rem;font-weight:700;color:#6b3a2a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">Dimensões da embalagem (para frete)</div>
+      <div class="row2">
+        <div class="form-group"><label>Altura (cm)</label><input type="number" id="p-altura" placeholder="0" min="0" step=".1"/></div>
+        <div class="form-group"><label>Largura (cm)</label><input type="number" id="p-largura" placeholder="0" min="0" step=".1"/></div>
+      </div>
+      <div class="row2">
+        <div class="form-group"><label>Comprimento (cm)</label><input type="number" id="p-comp" placeholder="0" min="0" step=".1"/></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="p-peso" placeholder="0.000" min="0" step=".001"/></div>
+      </div>
 
       <button class="btn btn-primary" id="btn-salvar" onclick="salvarProd()">Cadastrar produto</button>
     </div>
@@ -280,14 +294,16 @@ let fotoB64 = '';
 let coresAtivas = [];
 
 function addCor() {
-  const inp = document.getElementById('inp-cor-nova');
+  const inp    = document.getElementById('inp-cor-nova');
+  const inpQtd = document.getElementById('inp-cor-qtd');
   const val = inp.value.trim();
-  if (!val) return;
-  if (coresAtivas.map(c => c.toLowerCase()).includes(val.toLowerCase())) {
+  if (!val) { inp.focus(); return; }
+  if (coresAtivas.map(c => c.nome.toLowerCase()).includes(val.toLowerCase())) {
     toast('Cor já adicionada', '#f39c12'); return;
   }
-  coresAtivas.push(val);
-  inp.value = '';
+  const qtd = parseInt(inpQtd.value) || 0;
+  coresAtivas.push({ nome: val, qtd });
+  inp.value = ''; inpQtd.value = '';
   inp.focus();
   renderCoresChips();
 }
@@ -298,6 +314,10 @@ function removeCor(i) {
 }
 
 function corKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('inp-cor-qtd').focus(); }
+}
+
+function corQtdKeydown(e) {
   if (e.key === 'Enter') { e.preventDefault(); addCor(); }
 }
 
@@ -305,7 +325,8 @@ function renderCoresChips() {
   const el = document.getElementById('cores-chips');
   if (!el) return;
   el.innerHTML = coresAtivas.map((c, i) => `
-    <span class="core-chip">${c}<button type="button" onclick="removeCor(${i})" title="Remover">&#215;</button></span>
+    <span class="core-chip">${c.nome} <em style="font-weight:400;font-style:normal;opacity:.7">(${c.qtd})</em>
+      <button type="button" onclick="removeCor(${i})" title="Remover">&#215;</button></span>
   `).join('');
 }
 
@@ -369,13 +390,17 @@ async function salvarProd() {
         nome, cores: coresAtivas,
         qtd: parseInt(document.getElementById('p-qtd').value) || 0,
         preco, descricao: document.getElementById('p-desc').value.trim(),
-        foto: fotoB64
+        foto: fotoB64,
+        altura:      parseFloat(document.getElementById('p-altura').value)  || 0,
+        largura:     parseFloat(document.getElementById('p-largura').value) || 0,
+        comprimento: parseFloat(document.getElementById('p-comp').value)    || 0,
+        peso:        parseFloat(document.getElementById('p-peso').value)    || 0
       })
     });
     const data = await res.json();
     if (data.erro) throw new Error(data.erro);
 
-    ['p-nome','p-qtd','p-preco','p-desc'].forEach(id => document.getElementById(id).value = '');
+    ['p-nome','p-qtd','p-preco','p-desc','p-altura','p-largura','p-comp','p-peso'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('inp-foto').value = '';
     document.getElementById('preview-img').style.display = 'none';
     fotoB64 = '';
@@ -408,7 +433,19 @@ function renderListaProd() {
   if (!prodsCache.length) { el.innerHTML = '<div class="empty">Nenhum produto cadastrado.</div>'; return; }
   el.innerHTML = prodsCache.map(p => {
     const cores = Array.isArray(p.cores) ? p.cores : [];
-    const coresStr = cores.length ? cores.join(', ') + ' &middot; ' : '';
+    const temDim = p.altura > 0 || p.largura > 0 || p.comprimento > 0 || p.peso > 0;
+    const dimStr = temDim
+      ? `${p.altura}×${p.largura}×${p.comprimento}cm · ${p.peso}kg`
+      : 'Sem dimensões';
+    let estoqueStr;
+    if (cores.length) {
+      estoqueStr = cores.map(c => {
+        const esgotado = c.qtd === 0;
+        return `<span style="color:${esgotado ? '#c0392b' : '#555'}">${c.nome}: ${esgotado ? 'esgotado' : c.qtd}</span>`;
+      }).join(' &nbsp;·&nbsp; ');
+    } else {
+      estoqueStr = `Qtd: ${p.qtd}`;
+    }
     return `
     <div class="pi">
       ${p.foto
@@ -416,7 +453,8 @@ function renderListaProd() {
         : `<div class="pi-sem-foto">&#128156;</div>`}
       <div class="pi-info">
         <strong>${p.nome}</strong>
-        <span>${coresStr}Qtd: ${p.qtd} &middot; ${brl(p.preco)}</span>
+        <span style="font-size:.75rem">${estoqueStr} &middot; ${brl(p.preco)}</span>
+        <span style="color:${temDim ? '#5a7a5a' : '#bbb'};font-size:.72rem">&#128230; ${dimStr}</span>
       </div>
       <button class="btn btn-outline btn-sm" onclick="delProd(${p.id})">&#10005;</button>
     </div>`;
@@ -444,17 +482,21 @@ function renderGrid() {
   }
   el.innerHTML = prodsCache.map((p, i) => {
     const cores = Array.isArray(p.cores) ? p.cores : [];
+    const totalQtd = cores.length
+      ? cores.reduce((s, c) => s + (c.qtd || 0), 0)
+      : (p.qtd || 0);
+    const semEstoque = totalQtd === 0;
     const subTxt = cores.length
       ? cores.length + ' cor' + (cores.length > 1 ? 'es' : '')
       : '';
     return `
-    <div class="prod-card ${p.qtd == 0 ? 'sem-estoque' : ''}" onclick="addItem(${i})">
+    <div class="prod-card ${semEstoque ? 'sem-estoque' : ''}" onclick="addItem(${i})">
       ${p.foto
         ? `<img src="${p.foto}" alt="${p.nome}"/>`
         : `<div class="pc-sem-foto">&#128156;</div>`}
       <div class="pc-body">
         <div class="pc-nome">${p.nome}</div>
-        <div class="pc-sub">${subTxt}${p.qtd == 0 ? (subTxt ? ' &middot; ' : '') + 'Sem estoque' : ''}</div>
+        <div class="pc-sub">${subTxt}${semEstoque ? (subTxt ? ' &middot; ' : '') + 'Sem estoque' : ''}</div>
         <div class="pc-preco">${brl(p.preco)}</div>
       </div>
     </div>`;
@@ -472,9 +514,13 @@ function addItem(idx) {
     _modalIdx = idx;
     _modalCores = cores;
     document.getElementById('modal-prod-nome').textContent = p.nome;
-    document.getElementById('modal-cores-lista').innerHTML = cores.map((c, i) => `
-      <button class="cor-btn" onclick="confirmarCor(${i})">&#9679; ${c}</button>
-    `).join('');
+    document.getElementById('modal-cores-lista').innerHTML = cores.map((c, i) => {
+      const esgotado = c.qtd === 0;
+      return `<button class="cor-btn" ${esgotado ? 'disabled' : `onclick="confirmarCor(${i})"`}>
+        <span>&#9679; ${c.nome}</span>
+        <span class="cor-badge">${esgotado ? '&#10006; Esgotado' : c.qtd + ' disponíveis'}</span>
+      </button>`;
+    }).join('');
     document.getElementById('modal-cores').style.display = 'flex';
   } else {
     addItemComCor(idx, cores[0] || '');
@@ -492,10 +538,11 @@ function fecharModalCores() {
 }
 
 function addItemComCor(idx, cor) {
+  const corNome = cor && typeof cor === 'object' ? cor.nome : (cor || '');
   const p = prodsCache[idx];
-  const ex = pedItems.find(i => i.id === p.id && i.cor === cor);
+  const ex = pedItems.find(i => i.id === p.id && i.cor === corNome);
   if (ex) ex.qtd++;
-  else pedItems.push({ id: p.id, nome: p.nome, cor: cor, preco: parseFloat(p.preco), qtd: 1, foto: p.foto || '' });
+  else pedItems.push({ id: p.id, nome: p.nome, cor: corNome, preco: parseFloat(p.preco), qtd: 1, foto: p.foto || '' });
   renderItems(); updateResumo();
 }
 
