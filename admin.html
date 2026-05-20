@@ -679,6 +679,16 @@ function renderPedidos(pedidos) {
   const el = document.getElementById('lista-pedidos');
   if (!pedidos.length) { el.innerHTML = '<div class="empty">Nenhum pedido recebido ainda.</div>'; return; }
 
+  const agora = Date.now();
+  const CINCO_MIN = 5 * 60 * 1000;
+  pedidos = pedidos.filter(p => {
+    const isPendente = p.status !== 'pago' && p.status !== 'etiqueta_gerada';
+    if (!isPendente) return true;
+    return (agora - new Date(p.criado_em).getTime()) <= CINCO_MIN;
+  });
+
+  if (!pedidos.length) { el.innerHTML = '<div class="empty">Nenhum pedido recebido ainda.</div>'; return; }
+
   el.innerHTML = pedidos.map(p => {
     const items   = Array.isArray(p.items) ? p.items : [];
     const itensStr = items.map(i => `${i.qtd}x ${i.nome}${i.cor ? ' ('+i.cor+')' : ''}`).join(', ') || '—';
