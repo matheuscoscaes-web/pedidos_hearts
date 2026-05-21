@@ -171,6 +171,7 @@ app.post('/api/frete', async (req, res) => {
         );
         const prodMap = Object.fromEntries(prods.map(p => [p.id, p]));
 
+        const pesoMargem = 1 + (Number(process.env.PESO_MARGEM) || 0) / 100;
         let totalPeso = 0, maxAltura = 0, maxLargura = 0, maxComp = 0, temDimensoes = false;
         for (const item of items) {
           const p = prodMap[Number(item.id)];
@@ -187,7 +188,7 @@ app.post('/api/frete', async (req, res) => {
             height: maxAltura  || pkg.height,
             width:  maxLargura || pkg.width,
             length: maxComp    || pkg.length,
-            weight: totalPeso  || pkg.weight
+            weight: (totalPeso * pesoMargem) || pkg.weight
           };
         }
       }
@@ -260,6 +261,15 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
+async function meJson(response, label) {
+  const text = await response.text();
+  if (!response.ok || text.trimStart().startsWith('<')) {
+    throw new Error(`ME API "${label}" retornou status ${response.status} (resposta não-JSON). Verifique se o ME_TOKEN está válido.`);
+  }
+  try { return JSON.parse(text); }
+  catch { throw new Error(`ME API "${label}" retornou resposta inválida (status ${response.status}).`); }
+}
+
 app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM pedidos WHERE id = $1', [req.params.id]);
@@ -278,7 +288,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
 
     // Busca dados do remetente na conta ME
     const userRes = await fetch('https://melhorenvio.com.br/api/v2/me/user', { headers });
-    const meUser  = await userRes.json();
+    const meUser  = await meJson(userRes, 'user');
     if (!meUser.email) return res.status(400).json({ erro: 'Não foi possível buscar dados da conta ME.', detalhe: meUser });
 
     const items      = Array.isArray(pedido.items) ? pedido.items : JSON.parse(pedido.items || '[]');
@@ -298,6 +308,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
         [prodIds]
       );
       const prodMap = Object.fromEntries(prods.map(p => [p.id, p]));
+      const pesoMargem = 1 + (Number(process.env.PESO_MARGEM) || 0) / 100;
       let totalPeso = 0, maxAltura = 0, maxLargura = 0, maxComp = 0, temDimensoes = false;
       for (const item of items) {
         const p = prodMap[Number(item.id)];
@@ -314,7 +325,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
           height: maxAltura  || volumes[0].height,
           width:  maxLargura || volumes[0].width,
           length: maxComp    || volumes[0].length,
-          weight: totalPeso  || volumes[0].weight
+          weight: (totalPeso * pesoMargem) || volumes[0].weight
         }];
       }
     }
@@ -369,7 +380,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
     };
 
     const cartRes  = await fetch('https://melhorenvio.com.br/api/v2/me/cart', { method: 'POST', headers, body: JSON.stringify(cartBody) });
-    const cartData = await cartRes.json();
+    const cartData = await meJson(cartRes, 'cart');
     if (!cartData.id) return res.status(400).json({ erro: 'Erro ao adicionar ao carrinho ME.', detalhe: cartData });
     const meOrderId = cartData.id;
 
@@ -385,7 +396,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
 
     // 4. URL de impressão
     const printRes  = await fetch(`https://melhorenvio.com.br/api/v2/me/shipment/print?orders[]=${meOrderId}`, { headers });
-    const printData = await printRes.json();
+    const printData = await meJson(printRes, 'print');
     const etiquetaUrl = printData.url || '';
 
     await pool.query(
