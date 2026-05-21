@@ -133,6 +133,21 @@ app.post('/api/produtos', async (req, res) => {
   }
 });
 
+app.put('/api/produtos/:id/dimensoes', async (req, res) => {
+  try {
+    const { altura, largura, comprimento, peso } = req.body;
+    const { rows } = await pool.query(
+      `UPDATE produtos SET altura=$1, largura=$2, comprimento=$3, peso=$4 WHERE id=$5 RETURNING *`,
+      [parseFloat(altura)||0, parseFloat(largura)||0, parseFloat(comprimento)||0, parseFloat(peso)||0, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Produto não encontrado.' });
+    res.json(rows[0]);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: 'Erro ao atualizar produto.' });
+  }
+});
+
 app.delete('/api/produtos/:id', async (req, res) => {
   try {
     await pool.query('DELETE FROM produtos WHERE id = $1', [req.params.id]);
@@ -264,7 +279,8 @@ app.get('/api/pedidos', async (req, res) => {
 async function meJson(response, label) {
   const text = await response.text();
   if (!response.ok || text.trimStart().startsWith('<')) {
-    throw new Error(`ME API "${label}" retornou status ${response.status} (resposta não-JSON). Verifique se o ME_TOKEN está válido.`);
+    const preview = text.replace(/\s+/g, ' ').trim().slice(0, 300);
+    throw new Error(`ME API "${label}" status ${response.status} — resposta: ${preview}`);
   }
   try { return JSON.parse(text); }
   catch { throw new Error(`ME API "${label}" retornou resposta inválida (status ${response.status}).`); }

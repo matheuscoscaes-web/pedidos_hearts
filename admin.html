@@ -449,7 +449,7 @@ function renderListaProd() {
       estoqueStr = `Qtd: ${p.qtd}`;
     }
     return `
-    <div class="pi">
+    <div class="pi" id="pi-${p.id}">
       ${p.foto
         ? `<img src="${p.foto}" alt="${p.nome}" onerror="this.style.display='none'"/>`
         : `<div class="pi-sem-foto">&#128156;</div>`}
@@ -458,9 +458,48 @@ function renderListaProd() {
         <span style="font-size:.75rem">${estoqueStr} &middot; ${brl(p.preco)}</span>
         <span style="color:${temDim ? '#5a7a5a' : '#bbb'};font-size:.72rem">&#128230; ${dimStr}</span>
       </div>
-      <button class="btn btn-outline btn-sm" onclick="delProd(${p.id})">&#10005;</button>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+        <button class="btn btn-outline btn-sm" style="font-size:.7rem;padding:4px 8px" onclick="toggleEditDim(${p.id},${p.altura||0},${p.largura||0},${p.comprimento||0},${p.peso||0})">&#9998; Dim</button>
+        <button class="btn btn-outline btn-sm" onclick="delProd(${p.id})">&#10005;</button>
+      </div>
+    </div>
+    <div id="dim-form-${p.id}" style="display:none;background:#f9f5f2;border:1.5px solid #e0d4c8;border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:.75rem;font-weight:700;color:#6b3a2a;margin-bottom:8px">Dimensões da embalagem — ${p.nome}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="font-size:.72rem;font-weight:700;color:#6b3a2a;display:block;margin-bottom:3px">Largura (cm)</label><input type="number" id="dim-larg-${p.id}" value="${p.largura||0}" min="0" step=".1" style="width:100%;border:1.5px solid #e0d4c8;border-radius:8px;padding:6px 8px;font-size:.85rem;font-family:inherit"/></div>
+        <div><label style="font-size:.72rem;font-weight:700;color:#6b3a2a;display:block;margin-bottom:3px">Altura (cm)</label><input type="number" id="dim-alt-${p.id}" value="${p.altura||0}" min="0" step=".1" style="width:100%;border:1.5px solid #e0d4c8;border-radius:8px;padding:6px 8px;font-size:.85rem;font-family:inherit"/></div>
+        <div><label style="font-size:.72rem;font-weight:700;color:#6b3a2a;display:block;margin-bottom:3px">Comprimento (cm)</label><input type="number" id="dim-comp-${p.id}" value="${p.comprimento||0}" min="0" step=".1" style="width:100%;border:1.5px solid #e0d4c8;border-radius:8px;padding:6px 8px;font-size:.85rem;font-family:inherit"/></div>
+        <div><label style="font-size:.72rem;font-weight:700;color:#6b3a2a;display:block;margin-bottom:3px">Peso (kg)</label><input type="number" id="dim-peso-${p.id}" value="${p.peso||0}" min="0" step=".001" style="width:100%;border:1.5px solid #e0d4c8;border-radius:8px;padding:6px 8px;font-size:.85rem;font-family:inherit"/></div>
+      </div>
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:.82rem" onclick="salvarDim(${p.id})">Salvar dimensões</button>
+      <button class="btn btn-outline" style="padding:8px 14px;font-size:.82rem;margin-top:4px" onclick="document.getElementById('dim-form-${p.id}').style.display='none'">Cancelar</button>
     </div>`;
   }).join('');
+}
+
+function toggleEditDim(id) {
+  const form = document.getElementById('dim-form-' + id);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function salvarDim(id) {
+  const largura    = parseFloat(document.getElementById('dim-larg-' + id).value) || 0;
+  const altura     = parseFloat(document.getElementById('dim-alt-'  + id).value) || 0;
+  const comprimento = parseFloat(document.getElementById('dim-comp-' + id).value) || 0;
+  const peso       = parseFloat(document.getElementById('dim-peso-' + id).value) || 0;
+  try {
+    const res = await fetch('/api/produtos/' + id + '/dimensoes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ altura, largura, comprimento, peso })
+    });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+    await refreshProds();
+    toast('Dimensões salvas!');
+  } catch(e) {
+    toast('Erro: ' + e.message, '#e74c3c');
+  }
 }
 
 // ── novo pedido ────────────────────────────────────────────
