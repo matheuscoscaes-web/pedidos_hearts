@@ -336,10 +336,8 @@ async function calcularFrete() {
 
     if (!ops.length) throw new Error('PAC não disponível para esse CEP.');
 
-    // Valor fixo para SP (cobre frete + embalagem)
-    if (vcData.uf === 'SP') {
-      ops = ops.map(o => ({ ...o, price: 32 }));
-    }
+    // Adiciona R$7 em todos os estados (cobre embalagem e materiais)
+    ops = ops.map(o => ({ ...o, price: parseFloat((o.price + 7).toFixed(2)) }));
 
     renderOpcoesCorreios(ops);
   } catch(e) {
