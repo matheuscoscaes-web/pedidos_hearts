@@ -209,7 +209,7 @@ app.post('/api/frete', async (req, res) => {
       }
     }
 
-    const r = await fetch('https://melhorenvio.com.br/api/v2/me/shipment/calculate', {
+    const r = await fetch('https://app.melhorenvio.com.br/api/v2/me/shipment/calculate', {
       method: 'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -303,7 +303,7 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
     };
 
     // Busca dados do remetente na conta ME
-    const userRes = await fetch('https://melhorenvio.com.br/api/v2/me/user', { headers });
+    const userRes = await fetch('https://app.melhorenvio.com.br/api/v2/me/user', { headers });
     const meUser  = await meJson(userRes, 'user');
     if (!meUser.email) return res.status(400).json({ erro: 'Não foi possível buscar dados da conta ME.', detalhe: meUser });
 
@@ -395,23 +395,23 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
       }
     };
 
-    const cartRes  = await fetch('https://melhorenvio.com.br/api/v2/me/cart', { method: 'POST', headers, body: JSON.stringify(cartBody) });
+    const cartRes  = await fetch('https://app.melhorenvio.com.br/api/v2/me/cart', { method: 'POST', headers, body: JSON.stringify(cartBody) });
     const cartData = await meJson(cartRes, 'cart');
     if (!cartData.id) return res.status(400).json({ erro: 'Erro ao adicionar ao carrinho ME.', detalhe: cartData });
     const meOrderId = cartData.id;
 
     // 2. Checkout (debita saldo ME)
-    await fetch('https://melhorenvio.com.br/api/v2/me/shipment/checkout', {
+    await fetch('https://app.melhorenvio.com.br/api/v2/me/shipment/checkout', {
       method: 'POST', headers, body: JSON.stringify({ orders: [meOrderId] })
     });
 
     // 3. Gerar etiqueta
-    await fetch('https://melhorenvio.com.br/api/v2/me/shipment/generate', {
+    await fetch('https://app.melhorenvio.com.br/api/v2/me/shipment/generate', {
       method: 'POST', headers, body: JSON.stringify({ orders: [meOrderId] })
     });
 
     // 4. URL de impressão
-    const printRes  = await fetch(`https://melhorenvio.com.br/api/v2/me/shipment/print?orders[]=${meOrderId}`, { headers });
+    const printRes  = await fetch(`https://app.melhorenvio.com.br/api/v2/me/shipment/print?orders[]=${meOrderId}`, { headers });
     const printData = await meJson(printRes, 'print');
     const etiquetaUrl = printData.url || '';
 
@@ -479,7 +479,7 @@ app.post('/api/pedidos/:id/cancelar-etiqueta', async (req, res) => {
       'User-Agent':    'Hearts Couro (contato@heartscouro.com.br)'
     };
 
-    const r = await fetch(`https://melhorenvio.com.br/api/v2/me/cart/${pedido.me_order_id}`, {
+    const r = await fetch(`https://app.melhorenvio.com.br/api/v2/me/cart/${pedido.me_order_id}`, {
       method: 'DELETE',
       headers
     });
