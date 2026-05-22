@@ -484,51 +484,72 @@ app.post('/api/pedidos/:id/enviar-me', async (req, res) => {
       }
     }
 
-    const partes    = (pedido.cliente_nome || '').trim().split(' ');
-    const firstname = partes[0] || '';
-    const lastname  = partes.slice(1).join(' ') || '';
+    // Busca endereço do remetente via ViaCEP
+    const cepOrig = (process.env.CEP_ORIGEM || '').replace(/\D/g, '');
+    const cepRes  = await fetch(`https://viacep.com.br/ws/${cepOrig}/json/`);
+    const cepData = await cepRes.json();
+    if (cepData.erro) return res.status(400).json({ erro: 'CEP_ORIGEM inválido no .env' });
 
-    const orderBody = {
-      store:  'Hearts Couro',
-      status: 'paid',
+    const cartBody = {
+      service: pedido.me_service_id,
+      from: {
+        name:             process.env.ME_NOME      || 'Hearts Couro',
+        phone:            (process.env.ME_TELEFONE || '').replace(/\D/g, ''),
+        email:            process.env.ME_EMAIL     || '',
+        document:         (process.env.ME_CPF      || '').replace(/\D/g, ''),
+        company_document: (process.env.ME_CPF      || '').replace(/\D/g, ''),
+        state_register:   'Isento',
+        address:          cepData.logradouro || '',
+        complement:       '',
+        number:           process.env.ME_NUMERO    || '',
+        district:         cepData.bairro    || '',
+        city:             cepData.localidade || '',
+        state_abbr:       cepData.uf         || '',
+        country_id:       'BR',
+        postal_code:      cepOrig
+      },
+      to: {
+        name:        pedido.cliente_nome,
+        phone:       (pedido.cliente_whats || '').replace(/\D/g, ''),
+        email:       '',
+        document:    (pedido.cliente_cpf   || '').replace(/\D/g, ''),
+        address:     pedido.logradouro,
+        complement:  pedido.complemento || '',
+        number:      pedido.numero,
+        district:    pedido.bairro,
+        city:        pedido.cidade,
+        state_abbr:  pedido.uf,
+        country_id:  'BR',
+        postal_code: pedido.cep.replace(/\D/g, '')
+      },
       products: items.map(i => ({
         name:          i.nome + (i.cor ? ' - ' + i.cor : ''),
         quantity:      i.qtd,
         unitary_value: parseFloat(i.preco)
       })),
       volumes,
-      buyer: {
-        firstname,
-        lastname,
-        document: (pedido.cliente_cpf || '').replace(/\D/g, ''),
-        email:    '',
-        phone:    (pedido.cliente_whats || '').replace(/\D/g, '')
-      },
-      recipient: {
-        name:        pedido.cliente_nome,
-        address:     pedido.logradouro,
-        number:      pedido.numero,
-        complement:  pedido.complemento || '',
-        district:    pedido.bairro,
-        city:        pedido.cidade,
-        state_abbr:  pedido.uf,
-        country_id:  'BR',
-        postal_code: pedido.cep.replace(/\D/g, '')
+      options: {
+        insurance_value: totalValue,
+        receipt:         false,
+        own_hand:        false,
+        reverse:         false,
+        non_commercial:  false,
+        platform:        'Hearts Couro'
       }
     };
 
-    const orderRes  = await fetch('https://melhorenvio.com.br/api/v2/me/orders', {
-      method: 'POST', headers, body: JSON.stringify(orderBody)
+    const cartRes  = await fetch('https://melhorenvio.com.br/api/v2/me/cart', {
+      method: 'POST', headers, body: JSON.stringify(cartBody)
     });
-    const orderData = await meJson(orderRes, 'orders');
-    if (!orderData.id) return res.status(400).json({ erro: 'Erro ao criar pedido no ME.', detalhe: orderData });
+    const cartData = await meJson(cartRes, 'cart');
+    if (!cartData.id) return res.status(400).json({ erro: 'Erro ao adicionar ao carrinho ME.', detalhe: cartData });
 
     await pool.query(
       `UPDATE pedidos SET me_order_id = $1 WHERE id = $2`,
-      [String(orderData.id), req.params.id]
+      [String(cartData.id), req.params.id]
     );
 
-    res.json({ ok: true, me_order_id: orderData.id });
+    res.json({ ok: true, me_order_id: cartData.id });
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: 'Erro ao enviar para ME: ' + e.message });
