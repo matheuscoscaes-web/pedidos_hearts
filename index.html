@@ -330,11 +330,16 @@ async function calcularFrete() {
     const data = await res.json();
     if (data.erro) throw new Error(data.erro);
 
-    const ops = Array.isArray(data) ? data.filter(o =>
-      !o.error && o.price && /^(PAC|SEDEX)/i.test(o.name)
+    let ops = Array.isArray(data) ? data.filter(o =>
+      !o.error && o.price && /^PAC/i.test(o.name)
     ) : [];
 
-    if (!ops.length) throw new Error('PAC e SEDEX não disponíveis para esse CEP.');
+    if (!ops.length) throw new Error('PAC não disponível para esse CEP.');
+
+    // Valor fixo para SP (cobre frete + embalagem)
+    if (vcData.uf === 'SP') {
+      ops = ops.map(o => ({ ...o, price: 32 }));
+    }
 
     renderOpcoesCorreios(ops);
   } catch(e) {
