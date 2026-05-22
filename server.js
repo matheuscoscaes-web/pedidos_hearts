@@ -40,6 +40,7 @@ async function initDB() {
   await pool.query(`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS comprimento   DECIMAL(10,2)  DEFAULT 0`);
   await pool.query(`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS peso          DECIMAL(10,3)  DEFAULT 0`);
   await pool.query(`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS prazo_entrega VARCHAR(100)   DEFAULT ''`);
+  await pool.query(`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS fotos TEXT DEFAULT '[]'`);
   await pool.query(`ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(100) DEFAULT NULL`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pedidos (
@@ -102,7 +103,7 @@ app.get('/api/produtos', async (req, res) => {
 
 app.post('/api/produtos', async (req, res) => {
   try {
-    const { nome, cores, qtd, preco, descricao, foto, altura, largura, comprimento, peso, prazo_entrega } = req.body;
+    const { nome, cores, qtd, preco, descricao, foto, fotos, altura, largura, comprimento, peso, prazo_entrega } = req.body;
     if (!nome || !preco)
       return res.status(400).json({ erro: 'Nome e preço são obrigatórios.' });
 
@@ -115,9 +116,10 @@ app.post('/api/produtos', async (req, res) => {
       : parseInt(qtd) || 0;
     const coresJson = JSON.stringify(coresNorm);
     const { rows } = await pool.query(
-      `INSERT INTO produtos (nome, cores, qtd, preco, descricao, foto, altura, largura, comprimento, peso, prazo_entrega)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      `INSERT INTO produtos (nome, cores, qtd, preco, descricao, foto, fotos, altura, largura, comprimento, peso, prazo_entrega)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [nome, coresJson, qtdTotal, parseFloat(preco), descricao || '', foto || '',
+       JSON.stringify(Array.isArray(fotos) ? fotos : (foto ? [foto] : [])),
        parseFloat(altura) || 0, parseFloat(largura) || 0, parseFloat(comprimento) || 0, parseFloat(peso) || 0,
        prazo_entrega || '']
     );

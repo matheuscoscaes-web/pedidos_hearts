@@ -60,6 +60,10 @@
     .foto-up{border:2px dashed #ddc9b9;border-radius:12px;padding:18px;text-align:center;cursor:pointer;transition:background .2s}
     .foto-up:hover{background:#fdf6f0}.foto-up input{display:none}
     .foto-up .fu-icon{font-size:1.8rem}.foto-up p{color:#9e7060;font-size:.8rem;margin-top:4px}
+    .fotos-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+    .fg-item{position:relative;width:76px;height:76px;flex-shrink:0}
+    .fg-item img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1.5px solid #e0d4c8}
+    .fg-rm{position:absolute;top:-7px;right:-7px;background:#c0392b;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:.65rem;cursor:pointer;line-height:20px;text-align:center;padding:0;font-weight:700}
     #preview-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;margin-top:10px;display:none}
     /* link box */
     .link-box{background:#f0faf4;border:1.5px solid #a8d5b5;border-radius:12px;padding:14px;margin-bottom:12px}
@@ -203,13 +207,13 @@
       <div class="card-title">Cadastrar produto</div>
 
       <div class="form-group">
-        <label>Foto</label>
+        <label>Fotos</label>
+        <div class="fotos-grid" id="fotos-grid"></div>
         <div class="foto-up" onclick="document.getElementById('inp-foto').click()">
-          <input type="file" id="inp-foto" accept="image/*" onchange="prevFoto(event)"/>
+          <input type="file" id="inp-foto" accept="image/*" multiple onchange="prevFotos(event)"/>
           <div class="fu-icon">&#128247;</div>
-          <p>Toque para escolher uma foto</p>
+          <p id="foto-up-txt">Toque para adicionar fotos</p>
         </div>
-        <img id="preview-img" alt="preview"/>
       </div>
 
       <div class="form-group"><label>Nome</label><input type="text" id="p-nome" placeholder="Ex: Bolsa de couro"/></div>
@@ -294,7 +298,7 @@ async function getApiCfg() {
 
 // ── produtos ───────────────────────────────────────────────
 let prodsCache = [];
-let fotoB64 = '';
+let fotosB64 = [];
 let coresAtivas = [];
 
 function addCor() {
@@ -350,12 +354,32 @@ async function refreshProds() {
   renderGrid();
 }
 
-async function prevFoto(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  fotoB64 = await resizeImg(file, 600, 600, 0.78);
-  const img = document.getElementById('preview-img');
-  img.src = fotoB64; img.style.display = 'block';
+async function prevFotos(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  for (const file of files) {
+    const b64 = await resizeImg(file, 600, 600, 0.78);
+    fotosB64.push(b64);
+  }
+  document.getElementById('inp-foto').value = '';
+  renderFotosGrid();
+}
+
+function renderFotosGrid() {
+  const grid = document.getElementById('fotos-grid');
+  const txt  = document.getElementById('foto-up-txt');
+  if (!grid) return;
+  grid.innerHTML = fotosB64.map((f, i) => `
+    <div class="fg-item">
+      <img src="${f}"/>
+      <button class="fg-rm" onclick="removerFoto(${i})" type="button">&#10005;</button>
+    </div>`).join('');
+  if (txt) txt.textContent = fotosB64.length ? 'Adicionar mais fotos' : 'Toque para adicionar fotos';
+}
+
+function removerFoto(i) {
+  fotosB64.splice(i, 1);
+  renderFotosGrid();
 }
 
 function resizeImg(file, maxW, maxH, q) {
@@ -394,7 +418,8 @@ async function salvarProd() {
         nome, cores: coresAtivas,
         qtd: parseInt(document.getElementById('p-qtd').value) || 0,
         preco, descricao: document.getElementById('p-desc').value.trim(),
-        foto: fotoB64,
+        foto: fotosB64[0] || '',
+        fotos: fotosB64,
         altura:        parseFloat(document.getElementById('p-altura').value)  || 0,
         largura:       parseFloat(document.getElementById('p-largura').value) || 0,
         comprimento:   parseFloat(document.getElementById('p-comp').value)    || 0,
@@ -406,9 +431,8 @@ async function salvarProd() {
     if (data.erro) throw new Error(data.erro);
 
     ['p-nome','p-qtd','p-preco','p-desc','p-prazo','p-altura','p-largura','p-comp','p-peso'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('inp-foto').value = '';
-    document.getElementById('preview-img').style.display = 'none';
-    fotoB64 = '';
+    fotosB64 = [];
+    renderFotosGrid();
     coresAtivas = [];
     renderCoresChips();
 
