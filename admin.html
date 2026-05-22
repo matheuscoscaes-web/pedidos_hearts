@@ -807,7 +807,7 @@ async function gerarEtiqueta(id, btn) {
   } catch(e) {
     toast('Erro: ' + e.message, '#e74c3c');
     btn.disabled = false;
-    btn.textContent = '&#128230; Gerar Etiqueta ME';
+    btn.innerHTML = '&#128230; Gerar Etiqueta ME';
   }
 }
 
