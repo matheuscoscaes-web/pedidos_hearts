@@ -427,6 +427,113 @@ app.post('/api/pedidos/:id/etiqueta', async (req, res) => {
   }
 });
 
+// ── Melhor Envio — enviar pedido para Minhas Vendas ──────
+app.post('/api/pedidos/:id/enviar-me', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM pedidos WHERE id = $1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' });
+
+    const pedido = rows[0];
+    if (!pedido.me_service_id) return res.status(400).json({ erro: 'Este pedido não é via Correios.' });
+
+    const token = process.env.ME_TOKEN;
+    if (!token) return res.status(400).json({ erro: 'ME_TOKEN não configurado no .env' });
+
+    const headers = {
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+      'Authorization': 'Bearer ' + token,
+      'User-Agent':    'Hearts Couro (contato@heartscouro.com.br)'
+    };
+
+    const items = Array.isArray(pedido.items) ? pedido.items : JSON.parse(pedido.items || '[]');
+    const totalValue = parseFloat(pedido.subtotal) || items.reduce((s, i) => s + i.preco * i.qtd, 0);
+
+    let volumes = [{
+      height: Number(process.env.PKG_ALTURA)  || 10,
+      width:  Number(process.env.PKG_LARGURA) || 20,
+      length: Number(process.env.PKG_COMP)    || 30,
+      weight: Number(process.env.PKG_PESO)    || 0.5
+    }];
+    const prodIds = items.map(i => Number(i.id)).filter(Boolean);
+    if (prodIds.length) {
+      const { rows: prods } = await pool.query(
+        `SELECT id, altura, largura, comprimento, peso FROM produtos WHERE id = ANY($1)`, [prodIds]
+      );
+      const prodMap = Object.fromEntries(prods.map(p => [p.id, p]));
+      const pesoMargem = 1 + (Number(process.env.PESO_MARGEM) || 0) / 100;
+      let totalPeso = 0, maxAltura = 0, maxLargura = 0, maxComp = 0, temDimensoes = false;
+      for (const item of items) {
+        const p = prodMap[Number(item.id)];
+        if (p && (parseFloat(p.peso) > 0 || parseFloat(p.altura) > 0)) {
+          temDimensoes = true;
+          totalPeso += parseFloat(p.peso || 0) * (item.qtd || 1);
+          maxAltura  = Math.max(maxAltura,  parseFloat(p.altura      || 0));
+          maxLargura = Math.max(maxLargura, parseFloat(p.largura     || 0));
+          maxComp    = Math.max(maxComp,    parseFloat(p.comprimento || 0));
+        }
+      }
+      if (temDimensoes) {
+        volumes = [{
+          height: maxAltura  || volumes[0].height,
+          width:  maxLargura || volumes[0].width,
+          length: maxComp    || volumes[0].length,
+          weight: (totalPeso * pesoMargem) || volumes[0].weight
+        }];
+      }
+    }
+
+    const partes    = (pedido.cliente_nome || '').trim().split(' ');
+    const firstname = partes[0] || '';
+    const lastname  = partes.slice(1).join(' ') || '';
+
+    const orderBody = {
+      store:  'Hearts Couro',
+      status: 'paid',
+      products: items.map(i => ({
+        name:          i.nome + (i.cor ? ' - ' + i.cor : ''),
+        quantity:      i.qtd,
+        unitary_value: parseFloat(i.preco)
+      })),
+      volumes,
+      buyer: {
+        firstname,
+        lastname,
+        document: (pedido.cliente_cpf || '').replace(/\D/g, ''),
+        email:    '',
+        phone:    (pedido.cliente_whats || '').replace(/\D/g, '')
+      },
+      recipient: {
+        name:        pedido.cliente_nome,
+        address:     pedido.logradouro,
+        number:      pedido.numero,
+        complement:  pedido.complemento || '',
+        district:    pedido.bairro,
+        city:        pedido.cidade,
+        state_abbr:  pedido.uf,
+        country_id:  'BR',
+        postal_code: pedido.cep.replace(/\D/g, '')
+      }
+    };
+
+    const orderRes  = await fetch('https://app.melhorenvio.com.br/api/v2/me/orders', {
+      method: 'POST', headers, body: JSON.stringify(orderBody)
+    });
+    const orderData = await meJson(orderRes, 'orders');
+    if (!orderData.id) return res.status(400).json({ erro: 'Erro ao criar pedido no ME.', detalhe: orderData });
+
+    await pool.query(
+      `UPDATE pedidos SET me_order_id = $1 WHERE id = $2`,
+      [String(orderData.id), req.params.id]
+    );
+
+    res.json({ ok: true, me_order_id: orderData.id });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: 'Erro ao enviar para ME: ' + e.message });
+  }
+});
+
 // ── pagamento — Mercado Pago (token fica só no servidor) ──
 app.post('/api/mp/preferencia', async (req, res) => {
   try {
