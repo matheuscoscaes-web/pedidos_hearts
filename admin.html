@@ -769,10 +769,10 @@ function renderPedidos(pedidos) {
         : '<span class="badge badge-wait">Aguardando pagamento</span>';
 
     let addrHtml = '';
-    if (correios && p.logradouro) {
+    if (p.logradouro) {
       addrHtml = `<div class="ped-addr">
         &#128205; ${p.logradouro}, ${p.numero}${p.complemento ? ' — '+p.complemento : ''}<br/>
-        ${p.bairro} · ${p.cidade}/${p.uf} · CEP ${p.cep}
+        ${p.bairro} · ${p.cidade}/${p.uf}${p.cep ? ' · CEP ' + p.cep : ''}
       </div>`;
     }
 
@@ -796,7 +796,7 @@ function renderPedidos(pedidos) {
           <span class="ped-data">${data}</span>
           ${badgeHtml}
         </div>
-        <div class="ped-cliente">${p.cliente_nome || 'Cliente'}</div>
+        <div class="ped-cliente">${p.cliente_nome || 'Cliente'}${p.cliente_whats ? ' · <a href="https://wa.me/55' + p.cliente_whats.replace(/\D/g,'') + '" target="_blank" style="color:#25d366;font-size:.8rem">&#128740; ' + p.cliente_whats + '</a>' : ''}</div>
         <div class="ped-itens">${itensStr}</div>
         <div class="ped-valor">${brl(p.total)} &middot; ${p.frete_servico || p.frete_tipo || '—'}</div>
         ${addrHtml}

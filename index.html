@@ -439,8 +439,8 @@ function renderPagArea(total) {
     return;
   }
 
-  // Correios precisa de endereço preenchido
-  if (frete.me_service_id && !enderecoCliente) {
+  // Correios e entrega RJ precisam de endereço preenchido
+  if ((frete.me_service_id || frete._rj) && !enderecoCliente) {
     el.innerHTML = `<div class="warn" style="text-align:center;margin-bottom:0">&#9757;&#65039; Preencha o endereço de entrega acima para continuar.</div>`;
     return;
   }
@@ -454,7 +454,7 @@ function renderPagArea(total) {
 
 async function pagar() {
   if (!items.length || !frete) return;
-  if (frete.me_service_id && !enderecoCliente) { toast('Preencha o endereço de entrega', '#e74c3c'); return; }
+  if ((frete.me_service_id || frete._rj) && !enderecoCliente) { toast('Preencha o endereço de entrega', '#e74c3c'); return; }
 
   const btn = document.getElementById('btn-pagar');
   btn.disabled = true;
@@ -475,9 +475,9 @@ async function pagar() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            cliente_nome:  enderecoCliente?.nome || ORDER?.cliente || '',
-            cliente_cpf:   enderecoCliente?.cpf  || '',
-            cliente_whats: '',
+            cliente_nome:  enderecoCliente?.nome  || ORDER?.cliente || '',
+            cliente_cpf:   enderecoCliente?.cpf   || '',
+            cliente_whats: enderecoCliente?.whats || '',
             cep:           enderecoCliente?.cep        || '',
             logradouro:    enderecoCliente?.rua        || '',
             numero:        enderecoCliente?.numero     || '',
@@ -591,16 +591,22 @@ function mostrarFormEndereco() {
   const d = _cepData || {};
   const cepFmt = (d.cep || '').replace(/^(\d{5})-?(\d{3})$/, '$1-$2');
 
+  const isRJ = frete?._rj;
   formEl.innerHTML = `
     <h3>&#128205; Endereço de entrega</h3>
     <div class="fg">
-      <label>Nome completo do destinatário</label>
+      <label>Nome completo</label>
       <input type="text" id="end-nome" value="${ORDER?.cliente || ''}" placeholder="Nome completo"/>
     </div>
+    ${isRJ ? `
+    <div class="fg">
+      <label>WhatsApp</label>
+      <input type="tel" id="end-whats" placeholder="(21) 99999-0000" inputmode="numeric"/>
+    </div>` : `
     <div class="fg">
       <label>CPF</label>
       <input type="text" id="end-cpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpf(this)" inputmode="numeric"/>
-    </div>
+    </div>`}
     <div class="fg">
       <label>Rua / Avenida</label>
       <input type="text" id="end-rua" value="${d.logradouro || ''}" placeholder="Rua ..."/>
@@ -626,8 +632,10 @@ function mostrarFormEndereco() {
 }
 
 function confirmarEndereco() {
+  const isRJ  = frete?._rj;
   const nome   = document.getElementById('end-nome')?.value.trim();
   const cpf    = document.getElementById('end-cpf')?.value.trim();
+  const whats  = document.getElementById('end-whats')?.value.trim();
   const rua    = document.getElementById('end-rua')?.value.trim();
   const num    = document.getElementById('end-num')?.value.trim();
   const comp   = document.getElementById('end-comp')?.value.trim();
@@ -635,8 +643,8 @@ function confirmarEndereco() {
   const cidade = document.getElementById('end-cidade')?.value.trim();
   const uf     = document.getElementById('end-uf')?.value.trim().toUpperCase();
 
-  if (!nome)  { toast('Informe o nome do destinatário', '#e74c3c'); return; }
-  if (!cpf || cpf.replace(/\D/g,'').length !== 11) { toast('CPF inválido — informe os 11 dígitos', '#e74c3c'); return; }
+  if (!nome)  { toast('Informe o nome', '#e74c3c'); return; }
+  if (!isRJ && (!cpf || cpf.replace(/\D/g,'').length !== 11)) { toast('CPF inválido — informe os 11 dígitos', '#e74c3c'); return; }
   if (!rua)   { toast('Informe a rua/avenida', '#e74c3c'); return; }
   if (!num)   { toast('Informe o número do endereço', '#e74c3c'); return; }
   if (!bairro){ toast('Informe o bairro', '#e74c3c'); return; }
@@ -644,7 +652,7 @@ function confirmarEndereco() {
   if (!uf)    { toast('Informe o estado (UF)', '#e74c3c'); return; }
 
   const cepRaw = (_cepData?.cep || document.getElementById('cep-input')?.value || '').replace(/\D/g,'');
-  enderecoCliente = { nome, cpf, rua, numero: num, complemento: comp, bairro, cidade, uf, cep: cepRaw };
+  enderecoCliente = { nome, cpf: cpf || '', whats: whats || '', rua, numero: num, complemento: comp, bairro, cidade, uf, cep: cepRaw };
 
   const formEl = document.getElementById('card-endereco');
   if (formEl) {
@@ -652,6 +660,7 @@ function confirmarEndereco() {
       <div class="end-ok">
         <div class="eo-title">&#10003; Endereço confirmado</div>
         <div class="eo-addr">
+          ${nome}${whats ? ' · ' + whats : ''}<br/>
           ${rua}, ${num}${comp ? ' — '+comp : ''}<br/>
           ${bairro} · ${cidade}/${uf}<br/>
           CEP: ${cepRaw.replace(/^(\d{5})(\d{3})$/, '$1-$2')}
@@ -788,7 +797,7 @@ function resolverFreteRJ(bairro, localidade) {
 
   const prazoCustom = getPrazoCustom();
   const prazoExib = prazoCustom || prazo;
-  window._freteRJ = { servico: 'Entrega em ' + nomeExib, empresa: '', preco, prazo: prazoExib };
+  window._freteRJ = { servico: 'Entrega em ' + nomeExib, empresa: '', preco, prazo: prazoExib, _rj: true };
   const el = document.getElementById('frete-resultados');
   if (!el) return;
   el.innerHTML = `
@@ -804,8 +813,11 @@ function resolverFreteRJ(bairro, localidade) {
 function selecionarFreteRJ() {
   if (!window._freteRJ) return;
   frete = window._freteRJ;
+  enderecoCliente = null;
+  _pedidoSalvoId  = null;
   renderFrete();
   updateResumo();
+  mostrarFormEndereco();
 }
 
 // ── lightbox ───────────────────────────────────────────────

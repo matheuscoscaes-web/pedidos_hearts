@@ -1,0 +1,188 @@
+Rota de Entrega Hearts
+Segunda-Feira (Rota Verde - Diariamente)
+Taquara: R$ 10,00
+
+Curicica: R$ 25,00
+
+Tanque: R$ 20,00
+
+Pechincha: R$ 20,00
+
+Freguesia: R$ 25,00
+
+Vargens: R$ 25,00
+
+Barra da Tijuca: R$ 25,00
+
+Praça Seca: R$ 25,00
+
+Valqueire: R$ 25,00
+
+Madureira: R$ 25,00
+
+Cascadura: R$ 25,00
+
+Osvaldo Cruz: R$ 25,00
+
+Rocha Miranda: R$ 25,00
+
+Bento Ribeiro: R$ 25,00
+
+Marechal Hermes: R$ 25,00
+
+Magalhães Bastos: R$ 25,00
+
+Centro: R$ 25,00
+
+Vila Isabel: R$ 25,00
+
+São Cristóvão: R$ 25,00
+
+Tijuca: R$ 25,00
+
+Andaraí: R$ 25,00
+
+Grajaú: R$ 25,00
+
+Zona Sul: R$ 25,00
+
+Terça-Feira (Rota Azul)
+Sulacap: R$ 25,00
+
+Realengo: R$ 25,00
+
+Bangu: R$ 25,00
+
+Campo Grande: R$ 25,00
+
+Santíssimo: R$ 25,00
+
+Senador Camará: R$ 25,00
+
+Cosmos: R$ 25,00
+
+Guaratiba: R$ 25,00
+
+Ilha de Guaratiba: R$ 25,00
+
+Itaguaí: R$ 30,00
+
+Paciência: R$ 25,00
+
+Padre Miguel: R$ 25,00
+
+P. de Guaratiba: R$ 25,00
+
+Santa Cruz: R$ 25,00
+
+Sepetiba: R$ 25,00
+
+Recreio: R$ 25,00
+
+Quarta-Feira (Rota Roxa)
+Niterói: R$ 25,00
+
+Alcântara: R$ 25,00
+
+São Gonçalo: R$ 25,00
+
+Fonseca: R$ 25,00
+
+Icaraí: R$ 25,00
+
+Maricá: R$ 40,00
+
+Itaboraí: R$ 40,00
+
+Itaipuaçu: R$ 40,00
+
+Região dos Lagos (Toda 2ª quarta-feira do mês): R$ 100,00
+
+Quinta-Feira (Rota Coral)
+Bonsucesso: R$ 25,00
+
+Caxias: R$ 25,00
+
+Coelho Neto: R$ 25,00
+
+Fragoso: R$ 25,00
+
+Ilha do Governador: R$ 25,00
+
+Inhaúma: R$ 25,00
+
+Irajá: R$ 25,00
+
+Magé: R$ 25,00
+
+Olaria: R$ 25,00
+
+Penha: R$ 25,00
+
+Piabetá: R$ 25,00
+
+Ramos: R$ 25,00
+
+Saracuruna: R$ 25,00
+
+Vaz Lobo: R$ 25,00
+
+Vigário Geral: R$ 25,00
+
+Vila da Penha: R$ 25,00
+
+Vista Alegre: R$ 25,00
+
+Vila Kosmos: R$ 25,00
+
+Vicente de Carvalho: R$ 25,00
+
+Sexta-Feira (Rota Rosa)
+Anchieta: R$ 25,00
+
+Belford Roxo: R$ 25,00
+
+E. Pedreira: R$ 30,00
+
+Guadalupe: R$ 25,00
+
+Japeri: R$ 30,00
+
+Jardim América: R$ 25,00
+
+Queimados: R$ 30,00
+
+Mesquita: R$ 25,00
+
+Nilópolis: R$ 25,00
+
+Nova Iguaçu: R$ 25,00
+
+Olinda: R$ 25,00
+
+Pavuna: R$ 25,00
+
+R. de Albuquerque: R$ 25,00
+
+São João de Meriti: R$ 25,00
+
+Seropédica: R$ 30,00
+
+Tomás Coelho: R$ 25,00
+
+Sábado (Rota Ouro)
+Benfica: R$ 25,00
+
+Cachambi: R$ 25,00
+
+Caju: R$ 25,00
+
+Eng. Novo: R$ 25,00
+
+Méier: R$ 25,00
+
+Piedade: R$ 25,00
+
+Pilares: R$ 25,00
+
+Quintino: R$ 25,00
