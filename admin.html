@@ -115,6 +115,10 @@
     .btn-enviar-me{background:#fff;color:#2e7d32;border:1.5px solid #a5d6a7;border-radius:8px;padding:9px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;transition:all .2s;display:inline-block}
     .btn-enviar-me:hover{background:#e8f5e9;border-color:#2e7d32}
     .btn-enviar-me:disabled{opacity:.4;cursor:default}
+    .btn-edit-addr{background:#fff;color:#3a4e8c;border:1.5px solid #b8cdf8;border-radius:8px;padding:7px 12px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px;transition:all .2s;display:inline-block}
+    .btn-edit-addr:hover{background:#f0f4ff;border-color:#3a4e8c}
+    .badge-manual{background:#f3e5f5;color:#6a1b9a}
+    .form-manual-toggle{cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
     /* modal cor */
     .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center}
     .modal-sheet{background:#fff;width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:80vh;overflow-y:auto}
@@ -189,6 +193,45 @@
 
   <!-- ===== PEDIDOS ===== -->
   <div id="tab-pedidos" class="tab-panel">
+
+    <div class="card">
+      <div class="card-title form-manual-toggle" onclick="toggleFormManual()">
+        <span>&#9997;&#65039; Registrar Pedido Manual</span>
+        <span id="form-manual-icon" style="font-size:.75rem;color:#9e7060;font-weight:400">&#9660; expandir</span>
+      </div>
+      <div id="form-manual" style="display:none">
+        <div class="form-group"><label>Nome completo</label><input type="text" id="m-nome" placeholder="Ex: Maria da Silva"/></div>
+        <div class="row2">
+          <div class="form-group"><label>WhatsApp (com DDD)</label><input type="tel" id="m-whats" placeholder="21 99999-0000"/></div>
+          <div class="form-group"><label>CPF</label><input type="text" id="m-cpf" placeholder="000.000.000-00"/></div>
+        </div>
+        <div class="form-group">
+          <label>Produtos do catálogo</label>
+          <input type="text" id="m-busca-prod" placeholder="&#128269; Buscar produto..." oninput="filtrarGridManual()" style="background:#f9f5f2;margin-bottom:8px"/>
+          <div id="m-prod-grid" class="prod-grid" style="max-height:230px;overflow-y:auto;margin-bottom:4px"></div>
+          <div id="m-oi-list-manual"></div>
+        </div>
+        <div class="form-group"><label>CEP</label><input type="text" id="m-cep" placeholder="00000-000"/></div>
+        <div class="form-group"><label>Logradouro</label><input type="text" id="m-logradouro" placeholder="Rua, Av., etc."/></div>
+        <div class="row2">
+          <div class="form-group"><label>Número</label><input type="text" id="m-numero" placeholder="123"/></div>
+          <div class="form-group"><label>Complemento</label><input type="text" id="m-complemento" placeholder="Apt, Casa..."/></div>
+        </div>
+        <div class="form-group"><label>Bairro</label><input type="text" id="m-bairro"/></div>
+        <div class="row2">
+          <div class="form-group"><label>Cidade</label><input type="text" id="m-cidade"/></div>
+          <div class="form-group"><label>UF</label><input type="text" id="m-uf" maxlength="2" placeholder="RJ"/></div>
+        </div>
+        <div class="row2">
+          <div class="form-group"><label>Valor total (R$)</label><input type="number" id="m-total" placeholder="0,00" step=".01" min="0"/></div>
+          <div class="form-group"><label>Frete (R$)</label><input type="number" id="m-frete" placeholder="0,00" step=".01" min="0"/></div>
+        </div>
+        <div class="form-group"><label>Tipo / serviço de frete</label><input type="text" id="m-frete-tipo" placeholder="PAC, SEDEX, moto..."/></div>
+        <div class="form-group"><label>Produtos / Observações</label><textarea id="m-obs" placeholder="Ex: Bolsa de couro marrom"></textarea></div>
+        <button class="btn btn-primary" onclick="registrarPedidoManual()">Registrar pedido</button>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">Pedidos recebidos</div>
       <div id="lista-pedidos"><div class="empty">Carregando...</div></div>
@@ -273,6 +316,7 @@ function toast(msg, cor) {
   t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
 }
 function brl(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
+function esc(v) { return (v||'').toString().replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
 // ── tabs ───────────────────────────────────────────────────
 function showTab(id, btn) {
@@ -352,6 +396,7 @@ async function refreshProds() {
   await loadProds();
   renderListaProd();
   renderGrid();
+  renderGridManual();
 }
 
 async function prevFotos(e) {
@@ -573,6 +618,7 @@ function renderGrid() {
 
 let _modalIdx = null;
 let _modalCores = [];
+let _modalContext = 'regular';
 
 function addItem(idx) {
   const p = prodsCache[idx];
@@ -597,8 +643,11 @@ function addItem(idx) {
 
 function confirmarCor(i) {
   fecharModalCores();
-  if (_modalIdx !== null) addItemComCor(_modalIdx, _modalCores[i]);
-  _modalIdx = null;
+  if (_modalIdx !== null) {
+    if (_modalContext === 'manual') addItemComCorManual(_modalIdx, _modalCores[i]);
+    else addItemComCor(_modalIdx, _modalCores[i]);
+  }
+  _modalIdx = null; _modalContext = 'regular';
 }
 
 function fecharModalCores() {
@@ -726,6 +775,161 @@ function copiarLink() {
     .catch(() => toast('Selecione e copie manualmente', '#f39c12'));
 }
 
+// ── pedido manual — seleção de produtos ───────────────────
+let pedItemsManual = [];
+
+function renderGridManual() {
+  const el = document.getElementById('m-prod-grid');
+  if (!el) return;
+  if (!prodsCache.length) { el.innerHTML = '<div class="empty" style="grid-column:span 2;font-size:.78rem">Nenhum produto cadastrado.</div>'; return; }
+  el.innerHTML = prodsCache.map((p, i) => {
+    const cores = Array.isArray(p.cores) ? p.cores : [];
+    const totalQtd = cores.length ? cores.reduce((s, c) => s + (c.qtd || 0), 0) : (p.qtd || 0);
+    const semEstoque = totalQtd === 0;
+    return `
+    <div class="prod-card ${semEstoque ? 'sem-estoque' : ''}" onclick="addItemManual(${i})">
+      ${p.foto ? `<img src="${p.foto}" alt="${p.nome}"/>` : `<div class="pc-sem-foto">&#128156;</div>`}
+      <div class="pc-body">
+        <div class="pc-nome">${p.nome}</div>
+        <div class="pc-preco">${brl(p.preco)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filtrarGridManual() {
+  const termo = (document.getElementById('m-busca-prod')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('#m-prod-grid .prod-card').forEach(card => {
+    const nome = card.querySelector('.pc-nome')?.textContent.toLowerCase() || '';
+    card.style.display = nome.includes(termo) ? '' : 'none';
+  });
+}
+
+function addItemManual(idx) {
+  const p = prodsCache[idx];
+  const cores = Array.isArray(p.cores) ? p.cores : [];
+  if (cores.length > 1) {
+    _modalIdx = idx; _modalCores = cores; _modalContext = 'manual';
+    document.getElementById('modal-prod-nome').textContent = p.nome;
+    document.getElementById('modal-cores-lista').innerHTML = cores.map((c, i) => {
+      const esgotado = c.qtd === 0;
+      return `<button class="cor-btn" ${esgotado ? 'disabled' : `onclick="confirmarCor(${i})"`}>
+        <span>&#9679; ${c.nome}</span>
+        <span class="cor-badge">${esgotado ? '&#10006; Esgotado' : c.qtd + ' disponíveis'}</span>
+      </button>`;
+    }).join('');
+    document.getElementById('modal-cores').style.display = 'flex';
+  } else {
+    addItemComCorManual(idx, cores[0] || '');
+  }
+}
+
+function addItemComCorManual(idx, cor) {
+  const corNome = cor && typeof cor === 'object' ? cor.nome : (cor || '');
+  const p = prodsCache[idx];
+  const ex = pedItemsManual.find(i => i.id === p.id && i.cor === corNome);
+  if (ex) ex.qtd++;
+  else pedItemsManual.push({ id: p.id, nome: p.nome, cor: corNome, preco: parseFloat(p.preco), qtd: 1 });
+  renderItemsManual();
+  updateTotalManual();
+}
+
+function chgQtdManual(idx, d) {
+  pedItemsManual[idx].qtd += d;
+  if (pedItemsManual[idx].qtd <= 0) pedItemsManual.splice(idx, 1);
+  renderItemsManual();
+  updateTotalManual();
+}
+
+function renderItemsManual() {
+  const el = document.getElementById('m-oi-list-manual');
+  if (!el) return;
+  if (!pedItemsManual.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="border-top:1px solid #eee;margin:6px 0 4px"></div>' +
+    pedItemsManual.map((item, i) => `
+      <div class="oi">
+        <div class="oi-sem-foto">&#128156;</div>
+        <div class="oi-info">
+          <strong>${item.nome}</strong>
+          <span>${item.cor || ''} &middot; ${brl(item.preco)}</span>
+        </div>
+        <div class="qtd-ctrl">
+          <button onclick="chgQtdManual(${i},-1)">&#8722;</button>
+          <span>${item.qtd}</span>
+          <button onclick="chgQtdManual(${i},+1)">+</button>
+        </div>
+        <button class="btn-rm" onclick="chgQtdManual(${i},-999)">&#10005;</button>
+      </div>`).join('');
+}
+
+function updateTotalManual() {
+  const sub = pedItemsManual.reduce((s, i) => s + i.preco * i.qtd, 0);
+  const el = document.getElementById('m-total');
+  if (el && sub > 0) el.value = sub.toFixed(2);
+}
+
+// ── pedido manual ──────────────────────────────────────────
+function toggleFormManual() {
+  const form = document.getElementById('form-manual');
+  const icon = document.getElementById('form-manual-icon');
+  const aberto = form.style.display !== 'none';
+  form.style.display = aberto ? 'none' : 'block';
+  icon.innerHTML = aberto ? '&#9660; expandir' : '&#9650; recolher';
+  if (!aberto) renderGridManual();
+}
+
+async function registrarPedidoManual() {
+  const nome = document.getElementById('m-nome').value.trim();
+  if (!nome) { toast('Informe o nome do cliente', '#e74c3c'); return; }
+  const obs = document.getElementById('m-obs').value.trim();
+  const manualTotal = parseFloat(document.getElementById('m-total').value) || 0;
+  const fretePreco  = parseFloat(document.getElementById('m-frete').value) || 0;
+  const freteTipo   = document.getElementById('m-frete-tipo').value.trim();
+  let items, subtotal;
+  if (pedItemsManual.length) {
+    items = pedItemsManual.map(i => ({ id: i.id, nome: i.nome, cor: i.cor, preco: i.preco, qtd: i.qtd }));
+    subtotal = pedItemsManual.reduce((s, i) => s + i.preco * i.qtd, 0);
+  } else {
+    subtotal = manualTotal;
+    items = obs ? [{ nome: obs, preco: subtotal, qtd: 1, cor: '', id: 0 }] : [];
+  }
+  const total = (manualTotal || subtotal) + fretePreco;
+  try {
+    const res = await fetch('/api/pedidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente_nome:  nome,
+        cliente_cpf:   document.getElementById('m-cpf').value.trim(),
+        cliente_whats: document.getElementById('m-whats').value.trim(),
+        cep:           document.getElementById('m-cep').value.trim(),
+        logradouro:    document.getElementById('m-logradouro').value.trim(),
+        numero:        document.getElementById('m-numero').value.trim(),
+        complemento:   document.getElementById('m-complemento').value.trim(),
+        bairro:        document.getElementById('m-bairro').value.trim(),
+        cidade:        document.getElementById('m-cidade').value.trim(),
+        uf:            document.getElementById('m-uf').value.trim().toUpperCase(),
+        frete_tipo:    freteTipo || 'correios',
+        frete_servico: freteTipo,
+        frete_preco:   fretePreco,
+        items, subtotal, total,
+        status: 'manual'
+      })
+    });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+    ['m-nome','m-cpf','m-whats','m-cep','m-logradouro','m-numero','m-complemento','m-bairro','m-cidade','m-uf','m-obs','m-frete','m-frete-tipo'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('m-total').value = '';
+    pedItemsManual = [];
+    renderItemsManual();
+    renderGridManual();
+    toast('Pedido registrado!');
+    await loadPedidos();
+  } catch(e) {
+    toast('Erro: ' + e.message, '#e74c3c');
+  }
+}
+
 // ── pedidos ────────────────────────────────────────────────
 async function loadPedidos() {
   const el = document.getElementById('lista-pedidos');
@@ -748,7 +952,7 @@ function renderPedidos(pedidos) {
   const agora = Date.now();
   const CINCO_MIN = 5 * 60 * 1000;
   pedidos = pedidos.filter(p => {
-    const isPendente = p.status !== 'pago' && p.status !== 'etiqueta_gerada';
+    const isPendente = p.status !== 'pago' && p.status !== 'etiqueta_gerada' && p.status !== 'manual';
     if (!isPendente) return true;
     return (agora - new Date(p.criado_em).getTime()) <= CINCO_MIN;
   });
@@ -760,7 +964,8 @@ function renderPedidos(pedidos) {
     const itensStr = items.map(i => `${i.qtd}x ${i.nome}${i.cor ? ' ('+i.cor+')' : ''}`).join(', ') || '—';
     const data    = new Date(p.criado_em).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     const gerada   = p.status === 'etiqueta_gerada';
-    const pago     = p.status === 'pago' || gerada;
+    const manual   = p.status === 'manual';
+    const pago     = p.status === 'pago' || gerada || manual;
     const correios = p.frete_tipo === 'correios';
     const badgeHtml = gerada
       ? '<span class="badge badge-ok">&#10003; Etiqueta gerada</span>'
@@ -769,18 +974,24 @@ function renderPedidos(pedidos) {
         : '<span class="badge badge-wait">Aguardando pagamento</span>';
 
     let addrHtml = '';
-    if (p.logradouro) {
-      addrHtml = `<div class="ped-addr">
-        &#128205; ${p.logradouro}, ${p.numero}${p.complemento ? ' — '+p.complemento : ''}<br/>
-        ${p.bairro} · ${p.cidade}/${p.uf}${p.cep ? ' · CEP ' + p.cep : ''}
-      </div>`;
+    if (p.logradouro || p.bairro || p.cep) {
+      const linha1 = p.logradouro
+        ? `${p.logradouro}${p.numero ? ', ' + p.numero : ''}${p.complemento ? ' — ' + p.complemento : ''}<br/>`
+        : '';
+      const partes2 = [
+        p.bairro || '',
+        (p.cidade && p.uf) ? `${p.cidade}/${p.uf}` : (p.cidade || p.uf || ''),
+        p.cep ? 'CEP ' + p.cep : ''
+      ].filter(Boolean);
+      const linha2 = partes2.join(' · ');
+      addrHtml = `<div class="ped-addr">&#128205; ${linha1}${linha2}</div>`;
     }
 
     let acaoHtml = '';
-    if (correios && pago && !gerada) {
+    if (correios && pago && !gerada && !manual) {
       acaoHtml = `<button class="btn-etiqueta" onclick="gerarEtiqueta(${p.id}, this)">&#128230; Gerar Etiqueta ME</button>`;
       acaoHtml += ` <button class="btn-enviar-me" onclick="enviarParaME(${p.id}, this)">&#128666; Enviar p/ ME</button>`;
-    } else if (correios && !pago) {
+    } else if (correios && !pago && !manual) {
       acaoHtml = `<span style="font-size:.76rem;color:#9e7060">&#9203; Aguardando pagamento para gerar etiqueta</span>`;
     }
     if (p.etiqueta_url) {
@@ -790,17 +1001,53 @@ function renderPedidos(pedidos) {
       acaoHtml += ` <button class="btn-cancelar-et" onclick="cancelarEtiqueta(${p.id}, this)">&#10006; Cancelar etiqueta</button>`;
     }
 
+    const iSt = 'width:100%;border:1.5px solid #e0d4c8;border-radius:8px;padding:7px 10px;font-size:.84rem;font-family:inherit;color:#333;background:#fff';
+    const lSt = 'font-size:.72rem;font-weight:700;color:#6b3a2a;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px';
+    const ef = `<div id="edit-addr-${p.id}" style="display:none;background:#f9f5f2;border:1.5px solid #ddc9b9;border-radius:10px;padding:14px;margin-top:10px">
+  <div style="font-size:.78rem;font-weight:700;color:#6b3a2a;margin-bottom:12px">&#9998; Editar dados</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div><label style="${lSt}">Nome</label><input type="text" id="ea-nome-${p.id}" value="${esc(p.cliente_nome)}" style="${iSt}"/></div>
+    <div><label style="${lSt}">WhatsApp</label><input type="tel" id="ea-whats-${p.id}" value="${esc(p.cliente_whats)}" style="${iSt}"/></div>
+  </div>
+  <div style="margin-top:8px"><label style="${lSt}">CPF</label><input type="text" id="ea-cpf-${p.id}" value="${esc(p.cliente_cpf)}" style="${iSt}"/></div>
+  <div style="margin-top:8px"><label style="${lSt}">CEP</label><input type="text" id="ea-cep-${p.id}" value="${esc(p.cep)}" style="${iSt}"/></div>
+  <div style="margin-top:8px"><label style="${lSt}">Logradouro</label><input type="text" id="ea-log-${p.id}" value="${esc(p.logradouro)}" style="${iSt}"/></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div><label style="${lSt}">Número</label><input type="text" id="ea-num-${p.id}" value="${esc(p.numero)}" style="${iSt}"/></div>
+    <div><label style="${lSt}">Compl.</label><input type="text" id="ea-comp-${p.id}" value="${esc(p.complemento)}" style="${iSt}"/></div>
+  </div>
+  <div style="margin-top:8px"><label style="${lSt}">Bairro</label><input type="text" id="ea-bairro-${p.id}" value="${esc(p.bairro)}" style="${iSt}"/></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div><label style="${lSt}">Cidade</label><input type="text" id="ea-cidade-${p.id}" value="${esc(p.cidade)}" style="${iSt}"/></div>
+    <div><label style="${lSt}">UF</label><input type="text" id="ea-uf-${p.id}" value="${esc(p.uf)}" maxlength="2" style="${iSt}"/></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+    <div><label style="${lSt}">Frete (R$)</label><input type="number" id="ea-frete-${p.id}" value="${esc(p.frete_preco)}" step=".01" min="0" placeholder="0,00" style="${iSt}"/></div>
+    <div><label style="${lSt}">Tipo / serviço</label><input type="text" id="ea-freteTipo-${p.id}" value="${esc(p.frete_servico || p.frete_tipo)}" placeholder="PAC, SEDEX, moto..." style="${iSt}"/></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button style="flex:1;padding:9px;background:#6b3a2a;color:#fff;border:none;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit" onclick="salvarEndereco(${p.id})">Salvar</button>
+    <button style="padding:9px 14px;background:#fff;color:#6b3a2a;border:1.5px solid #ddc9b9;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit" onclick="toggleEditAddr(${p.id})">Cancelar</button>
+  </div>
+</div>`;
     return `
       <div class="ped-item">
         <div class="ped-header">
           <span class="ped-data">${data}</span>
           ${badgeHtml}
         </div>
-        <div class="ped-cliente">${p.cliente_nome || 'Cliente'}${p.cliente_whats ? ' · <a href="https://wa.me/55' + p.cliente_whats.replace(/\D/g,'') + '" target="_blank" style="color:#25d366;font-size:.8rem">&#128740; ' + p.cliente_whats + '</a>' : ''}</div>
+        <div class="ped-cliente">${p.cliente_nome || 'Cliente'}</div>
         <div class="ped-itens">${itensStr}</div>
-        <div class="ped-valor">${brl(p.total)} &middot; ${p.frete_servico || p.frete_tipo || '—'}</div>
+        <div class="ped-valor">
+          ${parseFloat(p.frete_preco) > 0
+            ? `${brl(p.subtotal)} + ${brl(p.frete_preco)} frete = <strong>${brl(p.total)}</strong>`
+            : `<strong>${brl(p.total)}</strong>`}
+          &middot; ${p.frete_servico || p.frete_tipo || '—'}
+        </div>
         ${addrHtml}
         ${acaoHtml}
+        <div style="margin-top:6px"><button class="btn-edit-addr" onclick="toggleEditAddr(${p.id})">&#9998; Editar dados</button></div>
+        ${ef}
       </div>`;
   }).join('');
 }
@@ -853,6 +1100,45 @@ async function gerarEtiqueta(id, btn) {
     toast('Erro: ' + e.message, '#e74c3c');
     btn.disabled = false;
     btn.innerHTML = '&#128230; Gerar Etiqueta ME';
+  }
+}
+
+// ── editar endereço do pedido ──────────────────────────────
+function toggleEditAddr(id) {
+  const form = document.getElementById('edit-addr-' + id);
+  if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function salvarEndereco(id) {
+  const g = f => (document.getElementById('ea-' + f + '-' + id)?.value || '').trim();
+  const btn = document.querySelector('#edit-addr-' + id + ' button');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Salvando...'; }
+  try {
+    const res = await fetch('/api/pedidos/' + id + '/endereco', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cliente_nome:  g('nome'),
+        cliente_whats: g('whats'),
+        cliente_cpf:   g('cpf'),
+        cep:           g('cep'),
+        logradouro:    g('log'),
+        numero:        g('num'),
+        complemento:   g('comp'),
+        bairro:        g('bairro'),
+        cidade:        g('cidade'),
+        uf:            g('uf').toUpperCase(),
+        frete_preco:   g('frete'),
+        frete_servico: g('freteTipo')
+      })
+    });
+    const data = await res.json();
+    if (data.erro) throw new Error(data.erro);
+    toast('Dados atualizados!');
+    await loadPedidos();
+  } catch(e) {
+    toast('Erro: ' + e.message, '#e74c3c');
+    if (btn) { btn.disabled = false; btn.textContent = 'Salvar'; }
   }
 }
 

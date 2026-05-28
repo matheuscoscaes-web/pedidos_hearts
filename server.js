@@ -242,7 +242,7 @@ app.post('/api/pedidos', async (req, res) => {
       cliente_nome, cliente_cpf, cliente_whats,
       cep, logradouro, numero, complemento, bairro, cidade, uf,
       frete_tipo, frete_servico, frete_empresa, frete_preco, frete_prazo,
-      me_service_id, items, subtotal, total
+      me_service_id, items, subtotal, total, status
     } = req.body;
 
     const { rows } = await pool.query(`
@@ -250,8 +250,8 @@ app.post('/api/pedidos', async (req, res) => {
         (cliente_nome, cliente_cpf, cliente_whats,
          cep, logradouro, numero, complemento, bairro, cidade, uf,
          frete_tipo, frete_servico, frete_empresa, frete_preco, frete_prazo,
-         me_service_id, items, subtotal, total)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         me_service_id, items, subtotal, total, status)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
       RETURNING id
     `, [
       cliente_nome || '', cliente_cpf || '', cliente_whats || '',
@@ -259,7 +259,8 @@ app.post('/api/pedidos', async (req, res) => {
       frete_tipo || 'retirada', frete_servico || '', frete_empresa || '',
       parseFloat(frete_preco) || 0, frete_prazo || '',
       me_service_id || null, JSON.stringify(items || []),
-      parseFloat(subtotal) || 0, parseFloat(total) || 0
+      parseFloat(subtotal) || 0, parseFloat(total) || 0,
+      status || 'aguardando'
     ]);
     res.json({ id: rows[0].id });
   } catch (e) {
@@ -275,6 +276,26 @@ app.get('/api/pedidos', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ erro: 'Erro ao buscar pedidos.' });
+  }
+});
+
+app.put('/api/pedidos/:id/endereco', async (req, res) => {
+  try {
+    const { cliente_nome, cliente_cpf, cliente_whats, cep, logradouro, numero, complemento, bairro, cidade, uf, frete_preco, frete_servico } = req.body;
+    const fretePreco = parseFloat(frete_preco) || 0;
+    const { rows: cur } = await pool.query('SELECT subtotal FROM pedidos WHERE id=$1', [req.params.id]);
+    if (!cur.length) return res.status(404).json({ erro: 'Pedido não encontrado' });
+    const subtotal = parseFloat(cur[0].subtotal) || 0;
+    const total = subtotal + fretePreco;
+    const { rows } = await pool.query(
+      `UPDATE pedidos SET cliente_nome=$1, cliente_cpf=$2, cliente_whats=$3, cep=$4, logradouro=$5, numero=$6, complemento=$7, bairro=$8, cidade=$9, uf=$10, frete_preco=$11, frete_servico=$12, total=$13 WHERE id=$14 RETURNING id`,
+      [cliente_nome||'', cliente_cpf||'', cliente_whats||'', cep||'', logradouro||'', numero||'', complemento||'', bairro||'', cidade||'', uf||'', fretePreco, frete_servico||'', total, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ erro: 'Erro ao atualizar: ' + e.message });
   }
 });
 
